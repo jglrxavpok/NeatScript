@@ -1,0 +1,82 @@
+import org.apache.tools.ant.filters.FixCrLfFilter
+import org.apache.tools.ant.filters.ReplaceTokens
+
+def filteredSourceDir = file("${buildDir}/filtered")
+
+// Read properties file
+ext {
+    configFile = file "build.properties"
+
+    configFile.withReader {
+        // Load config.  It shall from now be referenced as simply config or project.config
+        def prop = new Properties()
+        prop.load(it)
+        config = new ConfigSlurper().parse(prop)
+    }
+}
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+// Maven Artefacts Info
+group = "org.jglr.ns"
+archivesBaseName = 'NeatScript'
+version = config.version
+
+//IDE
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+repositories {
+    mavenCentral()
+    maven {
+        name = 'sonatype-nexus'
+        url = 'https://oss.sonatype.org/content/groups/public/'
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '2.0'
+}
+
+task processVersion(type: Copy) {
+    from sourceSets.main.java 
+    into filteredSourceDir 
+    // Substitute property references in files
+    // Use some of the filters provided by Ant
+    filter(FixCrLfFilter)
+    filter(ReplaceTokens, tokens: ['version': version])
+    // Use a closure to filter each line
+    filter { String line ->
+        ("$line".replaceAll('"NeatScript:BuildNumber"', '"'+version+'"'))
+    }
+}
+
+sourceSets {  
+    filtered { 
+        java { 
+            srcDirs = [filteredSourceDir] 
+        } 
+    }
+} 
+
+//force UTF-8 to the compileJava task
+compileJava.options.encoding = 'UTF-8'
+
+// tell the compileJava task to compile the filtered source 
+compileJava.source = sourceSets.filtered.java 
+
+// Add dependencies processVersion to compileJava task
+compileJava.dependsOn processVersion 
+
+dependencies {
+	testCompile 'junit:junit:4.11'
+}
+
+jar
+{
+    manifest {
+        attributes 'Implementation-Title': 'NeatScript', 'Implementation-Version': version
+    }
+}
