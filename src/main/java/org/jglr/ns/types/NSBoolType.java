@@ -23,7 +23,7 @@ public class NSBoolType extends NSType
     @Override
     public NSObject operation(NSObject a, NSObject b, NSOperator operator)
     {
-        if(operator == NSOperator.EQUAL)
+        if(operator == NSOperator.EQUALITY_CHECK)
         {
             if(a.value() == null && b.value() == null)
                 return TRUE;

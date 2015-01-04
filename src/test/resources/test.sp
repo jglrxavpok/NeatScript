@@ -1,6 +1,6 @@
 "Start of program!";
 print("How are you going?" + " I'm a test program!" - " test");
-if(false) then
+if(false == false) then
 	"In If";
 else
 	"In Else";
@@ -8,6 +8,6 @@ else
 		"In If of Else";
 	else
 		"That never happens";
-	end;
-end;
+	end
+end
 "End of program!";

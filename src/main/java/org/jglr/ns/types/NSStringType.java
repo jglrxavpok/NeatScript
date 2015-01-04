@@ -22,9 +22,9 @@ public class NSStringType extends NSType
         {
             return new NSObject(NSTypes.STRING_TYPE).value(((String) a.value()).replace((String) b.value(), ""));
         }
-        else if(operator == NSOperator.EQUAL)
+        else if(operator == NSOperator.EQUALITY_CHECK)
         {
-            return new NSObject(NSTypes.BOOL_TYPE).value(a.equals(b));
+            return new NSObject(NSTypes.BOOL_TYPE).value(a.value().equals(b.value()));
         }
         throw new UnsupportedOperationException("Operator not supported: " + operator.toString());
     }

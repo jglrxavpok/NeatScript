@@ -161,197 +161,6 @@ public class NSCompiler implements NSOps
                         index++ ;
                         return new NSCodeToken("", NSTokenType.CLOSE_PARENTHESIS);
                     }
-                    else if(chars[index] == '<')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        NSOperator operator;
-                        if(chars[index + 1] == '<')
-                        {
-                            operator = NSOperator.LEFT_SHIFT;
-                        }
-                        else if(chars[index + 1] == '=')
-                        {
-                            operator = NSOperator.LEQUAL;
-                        }
-                        else
-                        {
-                            operator = NSOperator.LESS_THAN;
-                        }
-                        return new OperatorToken(operator);
-                    }
-                    else if(chars[index] == '>')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        NSOperator operator;
-                        if(chars[index + 1] == '>')
-                        {
-                            if(chars[index + 2] == '>')
-                            {
-                                operator = NSOperator.UNSIGNED_RIGHT_SHIFT;
-                            }
-                            else
-                                operator = NSOperator.RIGHT_SHIFT;
-                        }
-                        else if(chars[index + 1] == '=')
-                        {
-                            operator = NSOperator.GEQUAL;
-                        }
-                        else
-                        {
-                            operator = NSOperator.GREATER_THAN;
-                        }
-                        return new OperatorToken(operator);
-                    }
-                    else if(chars[index] == '+')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.PLUS);
-                    }
-                    else if(chars[index] == '-')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.MINUS);
-                    }
-                    else if(chars[index] == '*')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.TIMES);
-                    }
-                    else if(chars[index] == '/')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.DIVIDE);
-                    }
-                    else if(chars[index] == '&')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.AND);
-                    }
-                    else if(chars[index] == '%')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.MODULO);
-                    }
-                    else if(chars[index] == '|')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.BIT_OR);
-                    }
-                    else if(chars[index] == '^')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        return new OperatorToken(NSOperator.BIT_XOR);
-                    }
                     else if(chars[index] == ';')
                     {
                         if(!buffer.toString().isEmpty())
@@ -385,6 +194,12 @@ public class NSCompiler implements NSOps
                         line++ ;
 
                         return new NSCodeToken("", NSTokenType.NEW_LINE);
+                    }
+                    else
+                    {
+                        NSCodeToken op = getOperator(buffer, chars);
+                        if(op != null)
+                            return op;
                     }
                 }
 
@@ -424,6 +239,54 @@ public class NSCompiler implements NSOps
                 throw e;
             throw new NSCompilerException("Error while compiling.", e);
         }
+    }
+
+    private NSCodeToken getOperator(StringBuffer buffer, char[] chars)
+    {
+        int ii = index;
+        @SuppressWarnings("unchecked")
+        ArrayList<NSOperator> operators = (ArrayList<NSOperator>) NSOperator.list().clone();
+        ArrayList<NSOperator> toExclude = new ArrayList<>();
+        NSOperator foundOperator = null;
+        for(; ii < chars.length; ii++ )
+        {
+            if(operators.size() == 0)
+                return null;
+            if(operators.size() == 1)
+            {
+                if(operators.get(0).toString().equals(source.substring(index, ii)))
+                {
+                    foundOperator = operators.get(0);
+                    break;
+                }
+                else
+                    return null;
+            }
+            for(NSOperator operator : operators)
+            {
+                if(operator.toString().length() <= ii - index // If the operator is too 'small' 
+                        ||
+                        operator.toString().charAt(ii - index) != chars[index]) // If the operator identifier does not contain the current character
+                    toExclude.add(operator);
+            }
+            operators.removeAll(toExclude);
+            toExclude.clear();
+        }
+        if(foundOperator == null)
+            return null;
+        if(!buffer.toString().isEmpty())
+        {
+            for(NSKeywords keyword : NSKeywords.values())
+            {
+                if(keyword.raw().equals(buffer.toString()))
+                {
+                    return new KeywordToken(keyword);
+                }
+            }
+            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
+        }
+        index += (ii - index); // We offset the index by the length of the operator
+        return new OperatorToken(foundOperator);
     }
 
     public ArrayList<NSCodeToken> toRPN(List<NSCodeToken> nSCodeTokens)

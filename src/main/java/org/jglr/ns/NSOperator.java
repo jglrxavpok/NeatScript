@@ -1,5 +1,7 @@
 package org.jglr.ns;
 
+import java.util.*;
+
 public enum NSOperator
 {
     PLUS("+", 4),
@@ -16,7 +18,9 @@ public enum NSOperator
     GREATER_THAN(">", 6),
     GEQUAL(">=", 6),
     LEQUAL("<=", 6),
-    EQUAL("=", 14),
+    ASSIGNEMENT("=", 14),
+    NON_EQUALITY_CHECK("!=", 7),
+    EQUALITY_CHECK("==", 7),
     UNSIGNED_RIGHT_SHIFT(">>>", 5);
 
     private int    precedence;
@@ -36,6 +40,19 @@ public enum NSOperator
     public int precedence()
     {
         return precedence;
+    }
+
+    private static ArrayList<NSOperator> list;
+
+    public static ArrayList<NSOperator> list()
+    {
+        if(list == null)
+        {
+            list = new ArrayList<>();
+            for(NSOperator operator : values())
+                list.add(operator);
+        }
+        return list;
     }
 
 }

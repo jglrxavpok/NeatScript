@@ -10,8 +10,8 @@ public class NSInterpreter implements NSOps, NSTypes
 {
 
     private HashMap<String, NSFunc> functions;
-    private int                           lineNumber;
-    private Stack<NSObject>          heapStack;
+    private int                     lineNumber;
+    private Stack<NSObject>         heapStack;
 
     public NSInterpreter()
     {
@@ -77,7 +77,7 @@ public class NSInterpreter implements NSOps, NSTypes
             {
                 LabelInsn jumpInsn = (LabelInsn) insn;
                 NSObject value = vars.pop();
-                NSObject result = NSTypes.BOOL_TYPE.operation(value, NSTypes.BOOL_TYPE.TRUE, NSOperator.EQUAL);
+                NSObject result = NSTypes.BOOL_TYPE.operation(value, NSTypes.BOOL_TYPE.TRUE, NSOperator.EQUALITY_CHECK);
                 if(result == (insn.getOpcode() == IF_GOTO ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE))
                 {
                     index = gotoLabel(insns, index, jumpInsn.label()) - 1;

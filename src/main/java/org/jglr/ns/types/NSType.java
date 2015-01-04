@@ -19,7 +19,7 @@ public abstract class NSType
 
     public NSObject operation(NSObject a, NSObject b, NSOperator operator)
     {
-        if(operator == NSOperator.EQUAL)
+        if(operator == NSOperator.EQUALITY_CHECK)
         {
             if(a.value() == null && b.value() == null)
                 return NSTypes.BOOL_TYPE.TRUE;
