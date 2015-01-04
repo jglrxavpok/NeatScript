@@ -51,6 +51,14 @@ public enum NSOperator
             list = new ArrayList<>();
             for(NSOperator operator : values())
                 list.add(operator);
+            Collections.sort(list, new Comparator<NSOperator>()
+            {
+                @Override
+                public int compare(NSOperator o1, NSOperator o2)
+                {
+                    return Integer.compare(o1.name().length(), o2.name().length());
+                }
+            });
         }
         return list;
     }

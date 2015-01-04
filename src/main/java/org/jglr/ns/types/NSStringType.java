@@ -26,6 +26,11 @@ public class NSStringType extends NSType
         {
             return new NSObject(NSTypes.BOOL_TYPE).value(a.value().equals(b.value()));
         }
+        else if(operator == NSOperator.NON_EQUALITY_CHECK)
+        {
+            return new NSObject(NSTypes.BOOL_TYPE).value(!a.value().equals(b.value()));
+        }
+        // TODO: Split Operator '/'
         throw new UnsupportedOperationException("Operator not supported: " + operator.toString());
     }
 

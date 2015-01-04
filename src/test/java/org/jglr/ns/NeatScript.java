@@ -10,7 +10,7 @@ import org.junit.*;
 public class NeatScript implements NSOps, NSTypes
 {
 
-    @Test()
+    @Test
     public void testCompile() throws NSCompilerException
     {
         String source = read(NeatScript.class.getResourceAsStream("/test.sp"));

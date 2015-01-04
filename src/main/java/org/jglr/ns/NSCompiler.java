@@ -3,20 +3,26 @@ package org.jglr.ns;
 import java.util.*;
 
 import org.jglr.ns.insns.*;
+import org.jglr.ns.types.*;
 
 public class NSCompiler implements NSOps
 {
 
-    private int    index;
-    private String source;
-    private int    line;
-    private int    labelID;
-    private String labelBase;
+    private int                      index;
+    private String                   source;
+    private int                      line;
+    private int                      labelID;
+    private String                   labelBase;
+    private NSType                   pendingType;
+    private int                      varId;
+    private int                      currentVariable;
+    private HashMap<String, Integer> varName2Id;
 
     public NSCompiler()
     {
         NSOps.initAllNames();
         labelBase = "L";
+        varName2Id = new HashMap<>();
     }
 
     public List<NSInsn> compile(String source) throws NSCompilerException
@@ -70,6 +76,7 @@ public class NSCompiler implements NSOps
             {
                 boolean append = true;
                 boolean breakAfter = false;
+                NSCodeToken op = null;
                 if(chars[index] == '\"')
                 {
                     inString = !inString;
@@ -82,7 +89,9 @@ public class NSCompiler implements NSOps
                 }
                 else if(!inString)
                 {
-                    if(chars[index] == ' ')
+                    if((op = getOperator(buffer, chars)) != null)
+                        return op;
+                    else if(chars[index] == ' ')
                     {
                         if(!buffer.toString().isEmpty())
                         {
@@ -91,6 +100,14 @@ public class NSCompiler implements NSOps
                                 if(keyword.raw().equals(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
+                                }
+                            }
+                            for(NSOperator operator : NSOperator.values())
+                            {
+                                if(operator.toString().equals(buffer.toString()))
+                                {
+                                    index += operator.toString().length(); // We offset the index by the length of the operator
+                                    return new OperatorToken(operator);
                                 }
                             }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
@@ -109,6 +126,14 @@ public class NSCompiler implements NSOps
                                     return new KeywordToken(keyword);
                                 }
                             }
+                            for(NSOperator operator : NSOperator.values())
+                            {
+                                if(operator.toString().equals(buffer.toString()))
+                                {
+                                    index += operator.toString().length(); // We offset the index by the length of the operator
+                                    return new OperatorToken(operator);
+                                }
+                            }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                         }
                         index++ ;
@@ -123,6 +148,14 @@ public class NSCompiler implements NSOps
                                 if(keyword.raw().equals(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
+                                }
+                            }
+                            for(NSOperator operator : NSOperator.values())
+                            {
+                                if(operator.toString().equals(buffer.toString()))
+                                {
+                                    index += operator.toString().length(); // We offset the index by the length of the operator
+                                    return new OperatorToken(operator);
                                 }
                             }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
@@ -142,6 +175,14 @@ public class NSCompiler implements NSOps
                                 }
                             }
                         }
+                        for(NSOperator operator : NSOperator.values())
+                        {
+                            if(operator.toString().equals(buffer.toString()))
+                            {
+                                index += operator.toString().length(); // We offset the index by the length of the operator
+                                return new OperatorToken(operator);
+                            }
+                        }
                         index++ ;
                         return new NSCodeToken(buffer.toString(), NSTokenType.OPEN_PARENTHESIS);
                     }
@@ -158,6 +199,15 @@ public class NSCompiler implements NSOps
                             }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                         }
+                        for(NSOperator operator : NSOperator.values())
+                        {
+                            if(operator.toString().equals(buffer.toString()))
+                            {
+                                index += operator.toString().length(); // We offset the index by the length of the operator
+                                return new OperatorToken(operator);
+                            }
+                        }
+
                         index++ ;
                         return new NSCodeToken("", NSTokenType.CLOSE_PARENTHESIS);
                     }
@@ -188,18 +238,21 @@ public class NSCompiler implements NSOps
                                     return new KeywordToken(keyword);
                                 }
                             }
+                            for(NSOperator operator : NSOperator.values())
+                            {
+                                if(operator.toString().equals(buffer.toString()))
+                                {
+                                    index += operator.toString().length(); // We offset the index by the length of the operator
+                                    return new OperatorToken(operator);
+                                }
+                            }
+
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                         }
                         index++ ;
                         line++ ;
 
                         return new NSCodeToken("", NSTokenType.NEW_LINE);
-                    }
-                    else
-                    {
-                        NSCodeToken op = getOperator(buffer, chars);
-                        if(op != null)
-                            return op;
                     }
                 }
 
@@ -243,34 +296,25 @@ public class NSCompiler implements NSOps
 
     private NSCodeToken getOperator(StringBuffer buffer, char[] chars)
     {
-        int ii = index;
         @SuppressWarnings("unchecked")
         ArrayList<NSOperator> operators = (ArrayList<NSOperator>) NSOperator.list().clone();
-        ArrayList<NSOperator> toExclude = new ArrayList<>();
         NSOperator foundOperator = null;
-        for(; ii < chars.length; ii++ )
+        Collections.sort(operators, new Comparator<NSOperator>()
         {
-            if(operators.size() == 0)
-                return null;
-            if(operators.size() == 1)
+
+            @Override
+            public int compare(NSOperator o1, NSOperator o2)
             {
-                if(operators.get(0).toString().equals(source.substring(index, ii)))
-                {
-                    foundOperator = operators.get(0);
-                    break;
-                }
-                else
-                    return null;
+                return -Integer.compare(o1.name().length(), o2.name().length()); // We want the operators from longer to shorter
             }
-            for(NSOperator operator : operators)
+        });
+        for(NSOperator operator : operators)
+        {
+            if(source.indexOf(operator.toString()) == index)
             {
-                if(operator.toString().length() <= ii - index // If the operator is too 'small' 
-                        ||
-                        operator.toString().charAt(ii - index) != chars[index]) // If the operator identifier does not contain the current character
-                    toExclude.add(operator);
+                foundOperator = operator;
+                break;
             }
-            operators.removeAll(toExclude);
-            toExclude.clear();
         }
         if(foundOperator == null)
             return null;
@@ -283,9 +327,17 @@ public class NSCompiler implements NSOps
                     return new KeywordToken(keyword);
                 }
             }
+            for(NSOperator operator : operators)
+            {
+                if(operator.toString().equals(buffer.toString()))
+                {
+                    index += operator.toString().length(); // We offset the index by the length of the operator
+                    return new OperatorToken(operator);
+                }
+            }
             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
         }
-        index += (ii - index); // We offset the index by the length of the operator
+        index += foundOperator.toString().length(); // We offset the index by the length of the operator
         return new OperatorToken(foundOperator);
     }
 
@@ -402,17 +454,35 @@ public class NSCompiler implements NSOps
     {
         ArrayList<NSInsn> insnList = new ArrayList<>();
         insnList.add(new LabelInsn(new Label(nextLabelID())));
+        pendingType = null;
         if(tokenList.size() == 1)
         {
-            NSCodeToken nSCodeToken = tokenList.remove(tokenList.size() - 1);
-            if(nSCodeToken.type == NSTokenType.STRING || nSCodeToken.type == NSTokenType.WORD)
+            NSCodeToken token = tokenList.remove(tokenList.size() - 1);
+            if(token.type == NSTokenType.STRING)
             {
-                insnList.add(new LoadConstantInsn(nSCodeToken.content));
+                insnList.add(new LoadConstantInsn(token.content));
                 insnList.add(new FunctionCallInsn("print"));
+            }
+            else if(token.type == NSTokenType.WORD)
+            {
+                int vindex = -1;
+                if(varName2Id.containsKey(token.content))
+                {
+                    vindex = varName2Id.get(token.content);
+                }
+                if(vindex >= 0)
+                {
+                    insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                    insnList.add(new FunctionCallInsn("print"));
+                }
+                else
+                {
+                    throwCompilerException("Unexpected symbol: " + token.content);
+                }
             }
             else
             {
-                handleToken(nSCodeToken, insnList);
+                handleToken(token, insnList);
             }
         }
         else
@@ -427,31 +497,76 @@ public class NSCompiler implements NSOps
         return insnList;
     }
 
-    private void handleToken(NSCodeToken nSCodeToken, ArrayList<NSInsn> insnList)
+    private void handleToken(NSCodeToken token, ArrayList<NSInsn> insnList) throws NSCompilerException
     {
-        switch(nSCodeToken.type)
+        switch(token.type)
         {
+            case WORD:
+            {
+                for(NSType type : NSTypes.list())
+                {
+                    if(type.getID().equals(token.content))
+                    {
+                        pendingType = type;
+                        return;
+                    }
+                }
+                int vindex = 0;
+                if(pendingType != null)
+                {
+                    vindex = nextVarIndex();
+                    insnList.add(new NewVarInsn(pendingType, token.content, vindex));
+                    varName2Id.put(token.content, vindex);
+                    pendingType = null;
+                }
+                else
+                {
+                    vindex = -1;
+                    if(varName2Id.containsKey(token.content))
+                    {
+                        vindex = varName2Id.get(token.content);
+                    }
+                }
+                this.currentVariable = vindex;
+                insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+            }
+                break;
+
             case STRING:
             {
-                insnList.add(new LoadConstantInsn(nSCodeToken.content));
+                insnList.add(new LoadConstantInsn(token.content));
             }
                 break;
 
             case OPERATOR:
             {
-                insnList.add(new OperatorInsn(((OperatorToken) nSCodeToken).operator()));
+                NSOperator operator = ((OperatorToken) token).operator();
+                if(operator == NSOperator.ASSIGNEMENT)
+                {
+                    if(currentVariable == -1)
+                    {
+                        throwCompilerException("Tried to assign a value to an object that is not a variable.");
+                    }
+                    else
+                    {
+                        insnList.add(new NSVarInsn(VAR_STORE, currentVariable));
+                    }
+                    currentVariable = -1;
+                }
+                else
+                    insnList.add(new OperatorInsn(operator));
             }
                 break;
 
             case FUNCTION_CALL:
             {
-                insnList.add(new FunctionCallInsn(nSCodeToken.content));
+                insnList.add(new FunctionCallInsn(token.content));
             }
                 break;
 
             case KEYWORD:
             {
-                KeywordToken keyword = (KeywordToken) nSCodeToken;
+                KeywordToken keyword = (KeywordToken) token;
                 switch(keyword.keyword())
                 {
                     case IF:
@@ -501,6 +616,11 @@ public class NSCompiler implements NSOps
             default:
                 break;
         }
+    }
+
+    private int nextVarIndex()
+    {
+        return varId++ ;
     }
 
     private static final String SUB_LABEL_SEPARATOR = "-";

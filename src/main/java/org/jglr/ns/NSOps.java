@@ -16,6 +16,9 @@ public interface NSOps
     public static final int               STACK_PUSH    = 8;
     public static final int               STACK_PEEK    = 9;
     public static final int               STACK_POP     = 10;
+    public static final int               NEW_VAR       = 11;
+    public static final int               VAR_LOAD      = 12;
+    public static final int               VAR_STORE     = 13;
 
     static final HashMap<Integer, String> names         = new HashMap<>();
 

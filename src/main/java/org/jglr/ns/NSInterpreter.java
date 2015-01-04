@@ -12,6 +12,8 @@ public class NSInterpreter implements NSOps, NSTypes
     private HashMap<String, NSFunc> functions;
     private int                     lineNumber;
     private Stack<NSObject>         heapStack;
+    private int                     index;
+    private List<NSInsn>            insns;
 
     public NSInterpreter()
     {
@@ -46,13 +48,16 @@ public class NSInterpreter implements NSOps, NSTypes
 
     public void interpret(List<NSInsn> insns)
     {
-        Stack<NSObject> vars = new Stack<>();
+        this.insns = insns;
+        HashMap<Integer, NSVariable> variables = new HashMap<>();
+        Stack<NSObject> valuesStack = new Stack<>();
         lineNumber = 0;
+        this.index = 0;
         for(NSInsn insn : insns)
         {
             System.out.println("$ " + insn.toString());
         }
-        for(int index = 0; index < insns.size(); index++ )
+        for(; index < insns.size(); index++ )
         {
             NSInsn insn = insns.get(index);
             if(insn.getOpcode() == LINE_NUMBER)
@@ -71,12 +76,12 @@ public class NSInterpreter implements NSOps, NSTypes
                 }
                 else if(cst instanceof Boolean)
                     type = BOOL_TYPE; // TODO: True type verification
-                vars.push(new NSObject(type).value(cst));
+                valuesStack.push(new NSObject(type).value(cst));
             }
             else if(insn.getOpcode() == IF_NOT_GOTO || insn.getOpcode() == IF_GOTO)
             {
                 LabelInsn jumpInsn = (LabelInsn) insn;
-                NSObject value = vars.pop();
+                NSObject value = valuesStack.pop();
                 NSObject result = NSTypes.BOOL_TYPE.operation(value, NSTypes.BOOL_TYPE.TRUE, NSOperator.EQUALITY_CHECK);
                 if(result == (insn.getOpcode() == IF_GOTO ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE))
                 {
@@ -86,30 +91,67 @@ public class NSInterpreter implements NSOps, NSTypes
             }
             else if(insn.getOpcode() == STACK_PUSH)
             {
-                heapStack.push(vars.pop());
+                heapStack.push(valuesStack.pop());
             }
             else if(insn.getOpcode() == STACK_PEEK)
             {
-                vars.push(heapStack.peek());
+                valuesStack.push(heapStack.peek());
             }
             else if(insn.getOpcode() == STACK_POP)
             {
-                vars.push(heapStack.pop());
+                valuesStack.push(heapStack.pop());
+            }
+            else if(insn.getOpcode() == NEW_VAR)
+            {
+                NewVarInsn varInsn = (NewVarInsn) insn;
+                NSVariable variable = new NSVariable(varInsn.type(), varInsn.name(), varInsn.varIndex());
+                if(!variables.containsKey(variable.varIndex()))
+                {
+                    variables.put(variable.varIndex(), variable);
+                }
+                else
+                    throwRuntimeException("Variable name " + variable.name() + " already exists");
+            }
+            else if(insn.getOpcode() == VAR_LOAD)
+            {
+                NSVarInsn varInsn = (NSVarInsn) insn;
+                NSVariable var = variables.get(varInsn.varIndex());
+                if(var == null)
+                {
+                    throwRuntimeException("Tried to load invalid variable index: " + varInsn.varIndex());
+                }
+                else
+                {
+                    valuesStack.push(var.value());
+                }
+            }
+            else if(insn.getOpcode() == VAR_STORE)
+            {
+                NSVarInsn varInsn = (NSVarInsn) insn;
+                NSVariable var = variables.get(varInsn.varIndex());
+                if(var == null)
+                {
+                    throwRuntimeException("Tried to store to invalid variable index: " + varInsn.varIndex());
+                }
+                else
+                {
+                    var.value(valuesStack.pop());
+                }
             }
             else if(insn.getOpcode() == OPERATOR)
             {
-                NSObject b = vars.pop();
-                NSObject a = vars.pop();
+                NSObject b = valuesStack.pop();
+                NSObject a = valuesStack.pop();
                 OperatorInsn operator = (OperatorInsn) insn;
                 NSType type = NSTypes.getPriorityType(a, a.type(), b.type());
                 NSObject newVar = type.operation(a, b, operator.operator());
-                vars.push(newVar);
+                valuesStack.push(newVar);
             }
             else if(insn.getOpcode() == FUNCTION_CALL)
             {
                 FunctionCallInsn callInsn = (FunctionCallInsn) insn;
                 if(functions.containsKey(callInsn.functionName()))
-                    functions.get(callInsn.functionName()).run(vars);
+                    functions.get(callInsn.functionName()).run(valuesStack);
                 else
                 {
                     throwRuntimeException("Function " + callInsn.functionName() + " doesn't exist.");
@@ -137,7 +179,7 @@ public class NSInterpreter implements NSOps, NSTypes
 
     private void throwRuntimeException(String string)
     {
-        throw new RuntimeException(string + " (at line " + lineNumber + ")");
+        throw new RuntimeException(string + " (at line " + lineNumber + ", op: #" + index + " " + insns.get(index) + ")");
     }
 
 }

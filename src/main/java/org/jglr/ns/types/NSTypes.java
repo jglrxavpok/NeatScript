@@ -1,5 +1,7 @@
 package org.jglr.ns.types;
 
+import java.util.*;
+
 import org.jglr.ns.*;
 
 public interface NSTypes
@@ -27,5 +29,17 @@ public interface NSTypes
             }
         }
         return a;
+    }
+
+    static final List<NSType> list = new ArrayList<>();
+
+    public static List<NSType> list()
+    {
+        if(list.isEmpty())
+        {
+            list.add(STRING_TYPE);
+            list.add(BOOL_TYPE);
+        }
+        return list;
     }
 }
