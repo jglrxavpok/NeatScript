@@ -40,6 +40,11 @@ public abstract class NSType
         return null;
     }
 
+    public NSType init(NSObject object)
+    {
+        return this;
+    }
+
     public void newFunction(String id, NSFunc function)
     {
         if(functions == null)

@@ -76,7 +76,7 @@ public class NSInterpreter implements NSOps, NSTypes
                 }
                 else if(cst instanceof Boolean)
                     type = BOOL_TYPE; // TODO: True type verification
-                valuesStack.push(new NSObject(type).value(cst));
+                valuesStack.push(new NSObject(type, cst));
             }
             else if(insn.getOpcode() == IF_NOT_GOTO || insn.getOpcode() == IF_GOTO)
             {
@@ -100,6 +100,10 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == STACK_POP)
             {
                 valuesStack.push(heapStack.pop());
+            }
+            else if(insn.getOpcode() == POP)
+            {
+                valuesStack.pop();
             }
             else if(insn.getOpcode() == NEW_VAR)
             {
@@ -146,6 +150,17 @@ public class NSInterpreter implements NSOps, NSTypes
                 NSType type = NSTypes.getPriorityType(a, a.type(), b.type());
                 NSObject newVar = type.operation(a, b, operator.operator());
                 valuesStack.push(newVar);
+            }
+            else if(insn.getOpcode() == GET_FIELD)
+            {
+                NSObject var = valuesStack.pop();
+                NSObject field = var.field(((LoadFieldInsn) insn).fieldName());
+                if(field == null)
+                {
+                    throwRuntimeException("Unknown field: " + ((LoadFieldInsn) insn).fieldName() + " in type " + var.type().getID());
+                }
+                else
+                    valuesStack.push(field);
             }
             else if(insn.getOpcode() == FUNCTION_CALL)
             {

@@ -10,8 +10,8 @@ public class NSBoolType extends NSType
 
     public NSBoolType()
     {
-        TRUE = new NSObject(this).value(true);
-        FALSE = new NSObject(this).value(false);
+        TRUE = new NSObject(this, true);
+        FALSE = new NSObject(this, false);
     }
 
     @Override

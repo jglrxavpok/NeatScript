@@ -19,7 +19,7 @@ public class NSStringType extends NSType
                 NSObject object = vars.pop();
                 String str = (String) object.value();
                 int length = str.length();
-                vars.push(new NSObject(NSTypes.STRING_TYPE).value("" + length));
+                vars.push(new NSObject(NSTypes.STRING_TYPE, "" + length));
             }
         });
     }
@@ -35,19 +35,19 @@ public class NSStringType extends NSType
     {
         if(operator == NSOperator.PLUS)
         {
-            return new NSObject(NSTypes.STRING_TYPE).value((String) a.value() + b.value());
+            return new NSObject(NSTypes.STRING_TYPE, (String) a.value() + b.value());
         }
         else if(operator == NSOperator.MINUS)
         {
-            return new NSObject(NSTypes.STRING_TYPE).value(((String) a.value()).replace(String.valueOf(b.value()), ""));
+            return new NSObject(NSTypes.STRING_TYPE, ((String) a.value()).replace(String.valueOf(b.value()), ""));
         }
         else if(operator == NSOperator.EQUALITY_CHECK)
         {
-            return new NSObject(NSTypes.BOOL_TYPE).value(a.value().equals(b.value()));
+            return new NSObject(NSTypes.BOOL_TYPE, a.value().equals(b.value()));
         }
         else if(operator == NSOperator.NON_EQUALITY_CHECK)
         {
-            return new NSObject(NSTypes.BOOL_TYPE).value(!a.value().equals(b.value()));
+            return new NSObject(NSTypes.BOOL_TYPE, !a.value().equals(b.value()));
         }
         // TODO: Split Operator '/'
         throw new UnsupportedOperationException("Operator not supported: " + operator.toString());
@@ -65,6 +65,12 @@ public class NSStringType extends NSType
         if(type == this)
             return value;
         return super.cast(value, type);
+    }
+
+    public NSType init(NSObject object)
+    {
+        object.field("size", new NSObject(this, false).value(((String) object.value()).length()));
+        return this;
     }
 
 }

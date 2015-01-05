@@ -2,7 +2,7 @@ package org.jglr.ns.insns;
 
 import org.jglr.ns.*;
 
-public abstract class NSInsn implements NSOps
+public class NSInsn implements NSOps
 {
     private int opcode;
 

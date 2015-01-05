@@ -2,14 +2,15 @@
 print("How are you going?" + " I'm a test program!" - " test");
 String txt = "Some text";
 String txt1 = "dzqdqz";
-print(txt1.length();
+print("Size of txt1 is "+txt1.length()+" via length()");
+print("Size of txt1 is "+txt1.size+" via size");
 txt = "a";
 txt1;
-if(txt != "a") then
+if(false) then
 	"In If";
 else then
 	"In Else";
-	if(true) then
+	if(true == true) then
 		"In If of Else";
 	else then
 		"That never happens";
@@ -17,3 +18,7 @@ else then
 end
 print("Value of txt at end: "+txt);
 "End of program!";
+
+function prettify(String txt) {
+	print("$$ "+txt+" $$");
+}

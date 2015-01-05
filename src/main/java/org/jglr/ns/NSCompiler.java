@@ -2,6 +2,7 @@ package org.jglr.ns;
 
 import java.util.*;
 
+import org.jglr.ns.compiler.*;
 import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
 
@@ -18,6 +19,9 @@ public class NSCompiler implements NSOps
     private int                      currentVariable;
     private HashMap<String, Integer> varName2Id;
     private String                   namespace;
+    private NSFuncDef                currentMethodDef;
+    private boolean                  inFunctionDef;
+    private NSFuncDef                rootMethod;
 
     public NSCompiler()
     {
@@ -25,6 +29,7 @@ public class NSCompiler implements NSOps
         this.namespace = "std";
         labelBase = "L";
         varName2Id = new HashMap<>();
+        rootMethod = currentMethodDef = new NSFuncDef().name("$");
     }
 
     public List<NSInsn> compile(String source) throws NSCompilerException
@@ -49,8 +54,7 @@ public class NSCompiler implements NSOps
             {
                 if(nSCodeToken.type != NSTokenType.INSTRUCTION_END)
                     tokenList.add(nSCodeToken);
-                Collection<NSInsn> insns = makeInstructions(tokenList);
-                finalInstructions.addAll(insns);
+                makeInstructions(tokenList, finalInstructions);
                 if(!tokenList.isEmpty())
                 {
                     throwCompilerException("Missing semicolon.");
@@ -452,9 +456,8 @@ public class NSCompiler implements NSOps
         throw new NSCompilerException(string + " (at line " + line + ")");
     }
 
-    private Collection<NSInsn> makeInstructions(ArrayList<NSCodeToken> tokenList) throws NSCompilerException
+    private void makeInstructions(ArrayList<NSCodeToken> tokenList, ArrayList<NSInsn> insnList) throws NSCompilerException
     {
-        ArrayList<NSInsn> insnList = new ArrayList<>();
         insnList.add(new LabelInsn(new Label(nextLabelID())));
         pendingType = null;
         if(tokenList.size() == 1)
@@ -465,7 +468,7 @@ public class NSCompiler implements NSOps
                 insnList.add(new LoadConstantInsn(token.content));
                 insnList.add(new FunctionCallInsn("print").functionOwner(namespace));
             }
-            else if(token.type == NSTokenType.WORD)
+            else if(token.type == NSTokenType.WORD && !inFunctionDef)
             {
                 int vindex = -1;
                 if(varName2Id.containsKey(token.content))
@@ -484,22 +487,22 @@ public class NSCompiler implements NSOps
             }
             else
             {
-                handleToken(token, insnList);
+                handleToken(token, 0, new ArrayList<NSCodeToken>(), insnList);
             }
         }
         else
         {
             List<NSCodeToken> rpnList = toRPN(tokenList);
             tokenList.clear();
+            int index = 0;
             for(NSCodeToken nSCodeToken : rpnList)
             {
-                handleToken(nSCodeToken, insnList);
+                handleToken(nSCodeToken, index++ , rpnList, insnList);
             }
         }
-        return insnList;
     }
 
-    private void handleToken(NSCodeToken token, ArrayList<NSInsn> insnList) throws NSCompilerException
+    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, ArrayList<NSInsn> insnList) throws NSCompilerException
     {
         switch(token.type)
         {
@@ -510,15 +513,26 @@ public class NSCompiler implements NSOps
                     if(type.getID().equals(token.content))
                     {
                         pendingType = type;
+                        if(inFunctionDef)
+                        {
+                            currentMethodDef.types().add(type);
+                        }
                         return;
                     }
                 }
                 int vindex = 0;
                 if(pendingType != null)
                 {
-                    vindex = nextVarIndex();
-                    insnList.add(new NewVarInsn(pendingType, token.content, vindex));
-                    varName2Id.put(token.content, vindex);
+                    if(inFunctionDef)
+                    {
+                        currentMethodDef.paramNames().add(token.content);
+                    }
+                    else
+                    {
+                        vindex = nextVarIndex();
+                        insnList.add(new NewVarInsn(pendingType, token.content, vindex));
+                        varName2Id.put(token.content, vindex);
+                    }
                     pendingType = null;
                 }
                 else
@@ -551,6 +565,15 @@ public class NSCompiler implements NSOps
                         FunctionCallInsn callInsn = (FunctionCallInsn) previous;
                         callInsn.functionOwner(FunctionCallInsn.PREVIOUS);
                     }
+                    else if(previous.getOpcode() == VAR_LOAD)
+                    {
+                        insnList.set(insnList.size() - 1, new LoadFieldInsn(tokenList.get(tokenIndex - 1).content));
+                    }
+                    else if(pendingType != null)
+                    {
+                        insnList.set(insnList.size() - 1, new LoadStaticFieldInsn(pendingType.getID(), tokenList.get(tokenIndex - 1).content));
+                        pendingType = null;
+                    }
                 }
                 else if(operator == NSOperator.ASSIGNEMENT)
                 {
@@ -571,7 +594,14 @@ public class NSCompiler implements NSOps
 
             case FUNCTION_CALL:
             {
-                insnList.add(new FunctionCallInsn(token.content).functionOwner(namespace));
+                if(inFunctionDef)
+                {
+                    currentMethodDef.name(token.content);
+                }
+                else
+                {
+                    insnList.add(new FunctionCallInsn(token.content).functionOwner(namespace));
+                }
             }
                 break;
 
@@ -602,6 +632,7 @@ public class NSCompiler implements NSOps
                     case END:
                     {
                         insnList.add(new StackInsn(STACK_POP));
+                        insnList.add(new NSInsn(POP));
                         popLabelID();
                     }
                         break;
@@ -635,6 +666,31 @@ public class NSCompiler implements NSOps
                         {
                             throwCompilerException("Unexepected namespace identifier. Only string literals are allowed");
                         }
+                    }
+                        break;
+
+                    case FUNCTION_DEF:
+                    {
+                        inFunctionDef = true;
+                        System.out.println("OY M8 ");
+                    }
+                        break;
+
+                    case CODE_BLOCK_START:
+                    {
+                        if(inFunctionDef)
+                        {
+                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
+                            inFunctionDef = false;
+                        }
+                        else
+                            throwCompilerException("You must be defining a method to use a code block starting point");
+                    }
+                        break;
+
+                    case CODE_BLOCK_END:
+                    {
+                        currentMethodDef = rootMethod;
                     }
                         break;
 
