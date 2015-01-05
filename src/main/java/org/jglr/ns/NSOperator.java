@@ -21,7 +21,8 @@ public enum NSOperator
     ASSIGNEMENT("=", 14),
     NON_EQUALITY_CHECK("!=", 7),
     EQUALITY_CHECK("==", 7),
-    UNSIGNED_RIGHT_SHIFT(">>>", 5);
+    UNSIGNED_RIGHT_SHIFT(">>>", 5),
+    MEMBER_ACCESS(".", 7);
 
     private int    precedence;
     private String string;

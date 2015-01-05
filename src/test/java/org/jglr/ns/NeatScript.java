@@ -13,7 +13,7 @@ public class NeatScript implements NSOps, NSTypes
     @Test
     public void testCompile() throws NSCompilerException
     {
-        String source = read(NeatScript.class.getResourceAsStream("/test.sp"));
+        String source = read(NeatScript.class.getResourceAsStream("/test.ns"));
 
         List<NSInsn> insns = new NSCompiler().compile(source);
         Assert.assertTrue("Compilation failed", !insns.isEmpty());

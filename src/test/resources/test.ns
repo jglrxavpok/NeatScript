@@ -1,0 +1,19 @@
+"Start of program!";
+print("How are you going?" + " I'm a test program!" - " test");
+String txt = "Some text";
+String txt1 = "dzqdqz";
+print(txt1.length();
+txt = "a";
+txt1;
+if(txt != "a") then
+	"In If";
+else then
+	"In Else";
+	if(true) then
+		"In If of Else";
+	else then
+		"That never happens";
+	end
+end
+print("Value of txt at end: "+txt);
+"End of program!";

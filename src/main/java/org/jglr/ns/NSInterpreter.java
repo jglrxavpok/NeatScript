@@ -150,11 +150,23 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == FUNCTION_CALL)
             {
                 FunctionCallInsn callInsn = (FunctionCallInsn) insn;
-                if(functions.containsKey(callInsn.functionName()))
-                    functions.get(callInsn.functionName()).run(valuesStack);
+                HashMap<String, NSFunc> funcs = null;
+                String owner = callInsn.functionOwner();
+                if(callInsn.functionOwner().equals("std"))
+                {
+                    funcs = functions;
+                }
                 else
                 {
-                    throwRuntimeException("Function " + callInsn.functionName() + " doesn't exist.");
+                    NSType type = valuesStack.peek().type();
+                    owner = type.getID();
+                    funcs = type.functions();
+                }
+                if(funcs.containsKey(callInsn.functionName()))
+                    funcs.get(callInsn.functionName()).run(valuesStack);
+                else
+                {
+                    throwRuntimeException("Function " + owner + "::" + callInsn.functionName() + " doesn't exist.");
                 }
             }
         }

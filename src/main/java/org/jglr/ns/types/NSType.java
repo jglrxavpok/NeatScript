@@ -1,9 +1,14 @@
 package org.jglr.ns.types;
 
+import java.util.*;
+
 import org.jglr.ns.*;
+import org.jglr.ns.funcs.*;
 
 public abstract class NSType
 {
+
+    private HashMap<String, NSFunc> functions;
 
     public boolean isCastable(NSType type)
     {
@@ -33,5 +38,17 @@ public abstract class NSType
                 return NSTypes.BOOL_TYPE.FALSE;
         }
         return null;
+    }
+
+    public void newFunction(String id, NSFunc function)
+    {
+        if(functions == null)
+            functions = new HashMap<>();
+        functions.put(id, function);
+    }
+
+    public HashMap<String, NSFunc> functions()
+    {
+        return functions;
     }
 }

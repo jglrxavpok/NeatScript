@@ -1,9 +1,28 @@
 package org.jglr.ns.types;
 
+import java.util.*;
+
 import org.jglr.ns.*;
+import org.jglr.ns.funcs.*;
 
 public class NSStringType extends NSType
 {
+
+    public NSStringType()
+    {
+        newFunction("length", new NSFunc("length")
+        {
+
+            @Override
+            public void run(Stack<NSObject> vars)
+            {
+                NSObject object = vars.pop();
+                String str = (String) object.value();
+                int length = str.length();
+                vars.push(new NSObject(NSTypes.STRING_TYPE).value("" + length));
+            }
+        });
+    }
 
     @Override
     public String getID()
@@ -16,11 +35,11 @@ public class NSStringType extends NSType
     {
         if(operator == NSOperator.PLUS)
         {
-            return new NSObject(NSTypes.STRING_TYPE).value(a.value() + (String) b.value());
+            return new NSObject(NSTypes.STRING_TYPE).value((String) a.value() + b.value());
         }
         else if(operator == NSOperator.MINUS)
         {
-            return new NSObject(NSTypes.STRING_TYPE).value(((String) a.value()).replace((String) b.value(), ""));
+            return new NSObject(NSTypes.STRING_TYPE).value(((String) a.value()).replace(String.valueOf(b.value()), ""));
         }
         else if(operator == NSOperator.EQUALITY_CHECK)
         {

@@ -17,10 +17,12 @@ public class NSCompiler implements NSOps
     private int                      varId;
     private int                      currentVariable;
     private HashMap<String, Integer> varName2Id;
+    private String                   namespace;
 
     public NSCompiler()
     {
         NSOps.initAllNames();
+        this.namespace = "std";
         labelBase = "L";
         varName2Id = new HashMap<>();
     }
@@ -310,7 +312,7 @@ public class NSCompiler implements NSOps
         });
         for(NSOperator operator : operators)
         {
-            if(source.indexOf(operator.toString()) == index)
+            if(source.indexOf(operator.toString(), index) == index)
             {
                 foundOperator = operator;
                 break;
@@ -461,7 +463,7 @@ public class NSCompiler implements NSOps
             if(token.type == NSTokenType.STRING)
             {
                 insnList.add(new LoadConstantInsn(token.content));
-                insnList.add(new FunctionCallInsn("print"));
+                insnList.add(new FunctionCallInsn("print").functionOwner(namespace));
             }
             else if(token.type == NSTokenType.WORD)
             {
@@ -473,7 +475,7 @@ public class NSCompiler implements NSOps
                 if(vindex >= 0)
                 {
                     insnList.add(new NSVarInsn(VAR_LOAD, vindex));
-                    insnList.add(new FunctionCallInsn("print"));
+                    insnList.add(new FunctionCallInsn("print").functionOwner(namespace));
                 }
                 else
                 {
@@ -541,7 +543,16 @@ public class NSCompiler implements NSOps
             case OPERATOR:
             {
                 NSOperator operator = ((OperatorToken) token).operator();
-                if(operator == NSOperator.ASSIGNEMENT)
+                if(operator == NSOperator.MEMBER_ACCESS)
+                {
+                    NSInsn previous = insnList.get(insnList.size() - 1);
+                    if(previous.getOpcode() == FUNCTION_CALL)
+                    {
+                        FunctionCallInsn callInsn = (FunctionCallInsn) previous;
+                        callInsn.functionOwner(FunctionCallInsn.PREVIOUS);
+                    }
+                }
+                else if(operator == NSOperator.ASSIGNEMENT)
                 {
                     if(currentVariable == -1)
                     {
@@ -560,7 +571,7 @@ public class NSCompiler implements NSOps
 
             case FUNCTION_CALL:
             {
-                insnList.add(new FunctionCallInsn(token.content));
+                insnList.add(new FunctionCallInsn(token.content).functionOwner(namespace));
             }
                 break;
 
@@ -607,6 +618,26 @@ public class NSCompiler implements NSOps
                     }
                         break;
 
+                    case NAMESPACE:
+                    {
+                        NSInsn prev = insnList.get(insnList.size() - 1);
+                        if(prev.getOpcode() == LOAD_CONSTANT)
+                        {
+                            LoadConstantInsn loadInsn = (LoadConstantInsn) prev;
+                            Object cst = loadInsn.getConstant();
+                            if(cst instanceof String)
+                            {
+                                this.namespace = (String) cst;
+                            }
+                            insnList.remove(insnList.size() - 1);
+                        }
+                        else
+                        {
+                            throwCompilerException("Unexepected namespace identifier. Only string literals are allowed");
+                        }
+                    }
+                        break;
+
                     default:
                         break;
                 }
@@ -632,7 +663,7 @@ public class NSCompiler implements NSOps
         if(min <= 0)
             min = 1;
         labelID = Integer.parseInt(labelBase.substring(min));
-        labelBase = labelBase.substring(0, labelBase.length() - 1);
+        labelBase = labelBase.substring(0, labelBase.length() - ("" + labelID).length());
     }
 
     private void pushLabelID()

@@ -4,7 +4,8 @@ public enum NSKeywords
 {
     IF("if"), ELSE("else", true), ELSEIF("elseif", true), DELETE("delete"),
     THEN("then", true), END("end", true),
-    TRUE("true", 2000), FALSE("false", 2000);
+    TRUE("true", 2000), FALSE("false", 2000),
+    NAMESPACE("namespace");
 
     private String  keyword;
     private int     precedence;
