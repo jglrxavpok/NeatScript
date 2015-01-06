@@ -18,7 +18,11 @@ else then
 end
 print("Value of txt at end: "+txt);
 "End of program!";
+prettify("TEST PRETTIFY", "TEST");
+prettify("Second prettify", "second");
+prettify("lol", "hi");
 
-function prettify(String txt) {
-	print("$$ "+txt+" $$");
+function prettify(String txt 
+				  String t2) {
+	print("$$ "+txt+" $$"+t2);
 }

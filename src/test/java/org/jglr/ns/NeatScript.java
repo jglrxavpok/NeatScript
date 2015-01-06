@@ -3,42 +3,23 @@ package org.jglr.ns;
 import java.io.*;
 import java.util.*;
 
-import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
+import org.jglr.ns.vm.*;
 import org.junit.*;
 
 public class NeatScript implements NSOps, NSTypes
 {
-
     @Test
-    public void testCompile() throws NSCompilerException
+    public void testCompile() throws NSCompilerException, IOException, NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
     {
-        String source = read(NeatScript.class.getResourceAsStream("/test.ns"));
-
-        List<NSInsn> insns = new NSCompiler().compile(source);
-        Assert.assertTrue("Compilation failed", !insns.isEmpty());
-        new NSInterpreter().interpret(insns);
-    }
-
-    private static String read(InputStream in)
-    {
-        byte[] buffer = new byte[2048];
-        int i;
-        try
-        {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            while((i = in.read(buffer)) != -1)
-            {
-                out.write(buffer, 0, i);
-            }
-            out.flush();
-            out.close();
-            return new String(out.toByteArray(), "UTF-8");
-        }
-        catch(IOException e)
-        {
-            e.printStackTrace();
-        }
-        return null;
+        NSSourceFile source = new NSSourceFile("TestClass.ns", NeatScript.class.getResourceAsStream("/test.ns"));
+        NSClass clazz = new NSCompiler().compile(source);
+        Assert.assertTrue("Compilation failed", clazz != null);
+        NSVirtualMachine vm = new NSVirtualMachine();
+        vm.entryPoint(clazz);
+        List<NSType> types = new ArrayList<NSType>();
+        //        types.add(NSTypes.STRING_TYPE);
+        //        vm.methodCall(clazz.method("prettify", types), new NSObject(NSTypes.STRING_TYPE, "TEST"));
+        vm.launch();
     }
 }

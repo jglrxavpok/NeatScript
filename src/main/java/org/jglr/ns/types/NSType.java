@@ -8,15 +8,19 @@ import org.jglr.ns.funcs.*;
 public abstract class NSType
 {
 
-    private HashMap<String, NSFunc> functions;
+    private HashMap<String, NSNativeFunc> functions;
 
     public boolean isCastable(NSType type)
     {
+        if(type == this)
+            return true;
         return false;
     }
 
     public Object cast(Object value, NSType type)
     {
+        if(type == this)
+            return value;
         throw new UnsupportedOperationException(getID() + " is not castable to " + type.getID());
     }
 
@@ -45,15 +49,17 @@ public abstract class NSType
         return this;
     }
 
-    public void newFunction(String id, NSFunc function)
+    public void newFunction(String id, NSNativeFunc function)
     {
         if(functions == null)
             functions = new HashMap<>();
         functions.put(id, function);
     }
 
-    public HashMap<String, NSFunc> functions()
+    public HashMap<String, NSNativeFunc> functions()
     {
         return functions;
     }
+
+    public abstract NSObject emptyObject();
 }

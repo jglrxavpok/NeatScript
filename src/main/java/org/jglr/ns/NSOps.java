@@ -81,6 +81,7 @@ public interface NSOps
      * Loads a field based on its name
      */
     public static final int               GET_FIELD        = 0xE;
+
     @Deprecated
     public static final int               GET_STATIC_FIELD = 0xF;
 

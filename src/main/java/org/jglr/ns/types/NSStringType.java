@@ -10,7 +10,7 @@ public class NSStringType extends NSType
 
     public NSStringType()
     {
-        newFunction("length", new NSFunc("length")
+        newFunction("length", new NSNativeFunc("length")
         {
 
             @Override
@@ -71,6 +71,12 @@ public class NSStringType extends NSType
     {
         object.field("size", new NSObject(this, false).value(((String) object.value()).length()));
         return this;
+    }
+
+    @Override
+    public NSObject emptyObject()
+    {
+        return new NSObject(this, "");
     }
 
 }

@@ -2,61 +2,38 @@ package org.jglr.ns;
 
 import java.util.*;
 
-import org.jglr.ns.funcs.*;
+import org.jglr.ns.compiler.*;
 import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
+import org.jglr.ns.vm.*;
 
 public class NSInterpreter implements NSOps, NSTypes
 {
 
-    private HashMap<String, NSFunc> functions;
-    private int                     lineNumber;
-    private Stack<NSObject>         heapStack;
-    private int                     index;
-    private List<NSInsn>            insns;
+    private int              lineNumber;
+    private NSVirtualMachine vm;
 
-    public NSInterpreter()
+    public NSInterpreter(NSVirtualMachine vm)
     {
+        this.vm = vm;
         NSOps.initAllNames();
-        functions = new HashMap<>();
-        functions.put("print", new NSFunc("print")
-        {
-
-            @Override
-            public void run(Stack<NSObject> vars)
-            {
-                NSObject var = vars.pop();
-                System.out.println(var.value() + " | " + var.type());
-            }
-        });
-
-        functions.put("prettify", new NSFunc("prettify")
-        {
-
-            @Override
-            public void run(Stack<NSObject> vars)
-            {
-                NSObject var = vars.pop();
-                NSObject newVar = var.copy();
-                newVar.value("$$ " + newVar.value() + " $$");
-                vars.push(newVar);
-            }
-        });
-
-        heapStack = new Stack<>();
     }
 
-    public void interpret(List<NSInsn> insns)
+    public void interpret(List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
     {
-        this.insns = insns;
+        int index = 0;
+        Stack<NSObject> heapStack = new Stack<>();
         HashMap<Integer, NSVariable> variables = new HashMap<>();
         Stack<NSObject> valuesStack = new Stack<>();
-        lineNumber = 0;
-        this.index = 0;
-        for(NSInsn insn : insns)
+        for(int i = 0; i < startVariables.length; i++ )
         {
-            System.out.println("$ " + insn.toString());
+            variables.put(i, startVariables[i]);
         }
+        lineNumber = 0;
+        //        for(NSInsn insn : insns)
+        //        {
+        //            System.out.println("$ " + insn.toString());
+        //        }
         for(; index < insns.size(); index++ )
         {
             NSInsn insn = insns.get(index);
@@ -114,7 +91,7 @@ public class NSInterpreter implements NSOps, NSTypes
                     variables.put(variable.varIndex(), variable);
                 }
                 else
-                    throwRuntimeException("Variable name " + variable.name() + " already exists");
+                    throwRuntimeException("Variable name " + variable.name() + " already exists", lineNumber, index, insn);
             }
             else if(insn.getOpcode() == VAR_LOAD)
             {
@@ -122,7 +99,7 @@ public class NSInterpreter implements NSOps, NSTypes
                 NSVariable var = variables.get(varInsn.varIndex());
                 if(var == null)
                 {
-                    throwRuntimeException("Tried to load invalid variable index: " + varInsn.varIndex());
+                    throwRuntimeException("Tried to load invalid variable index: " + varInsn.varIndex(), lineNumber, index, insn);
                 }
                 else
                 {
@@ -135,7 +112,7 @@ public class NSInterpreter implements NSOps, NSTypes
                 NSVariable var = variables.get(varInsn.varIndex());
                 if(var == null)
                 {
-                    throwRuntimeException("Tried to store to invalid variable index: " + varInsn.varIndex());
+                    throwRuntimeException("Tried to store to invalid variable index: " + varInsn.varIndex(), lineNumber, index, insn);
                 }
                 else
                 {
@@ -157,7 +134,7 @@ public class NSInterpreter implements NSOps, NSTypes
                 NSObject field = var.field(((LoadFieldInsn) insn).fieldName());
                 if(field == null)
                 {
-                    throwRuntimeException("Unknown field: " + ((LoadFieldInsn) insn).fieldName() + " in type " + var.type().getID());
+                    throwRuntimeException("Unknown field: " + ((LoadFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
                 }
                 else
                     valuesStack.push(field);
@@ -165,24 +142,20 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == FUNCTION_CALL)
             {
                 FunctionCallInsn callInsn = (FunctionCallInsn) insn;
-                HashMap<String, NSFunc> funcs = null;
                 String owner = callInsn.functionOwner();
                 if(callInsn.functionOwner().equals("std"))
                 {
-                    funcs = functions;
+                    vm.callStdFunction(callInsn.functionName(), valuesStack);
+                    continue;
                 }
-                else
+                else if(callInsn.functionOwner().equals(FunctionCallInsn.PREVIOUS))
                 {
                     NSType type = valuesStack.peek().type();
                     owner = type.getID();
-                    funcs = type.functions();
                 }
-                if(funcs.containsKey(callInsn.functionName()))
-                    funcs.get(callInsn.functionName()).run(valuesStack);
-                else
-                {
-                    throwRuntimeException("Function " + owner + "::" + callInsn.functionName() + " doesn't exist.");
-                }
+                NSAbstractMethod method = vm.getOrLoad(owner).method(callInsn.functionName(), callInsn.types());
+                method.owner(owner);
+                vm.methodCall(method, valuesStack);
             }
         }
     }
@@ -204,9 +177,14 @@ public class NSInterpreter implements NSOps, NSTypes
         return -1;
     }
 
-    private void throwRuntimeException(String string)
+    private void throwRuntimeException(String string, int lineNumber, int index, NSInsn insn)
     {
-        throw new RuntimeException(string + " (at line " + lineNumber + ", op: #" + index + " " + insns.get(index) + ")");
+        throw new RuntimeException(string + " (at line " + lineNumber + ", op: #" + index + " " + insn + ")");
+    }
+
+    public int lineNumber()
+    {
+        return lineNumber;
     }
 
 }

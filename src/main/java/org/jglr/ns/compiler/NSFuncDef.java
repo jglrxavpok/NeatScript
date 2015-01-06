@@ -2,55 +2,30 @@ package org.jglr.ns.compiler;
 
 import java.util.*;
 
-import org.jglr.ns.types.*;
+import org.jglr.ns.*;
+import org.jglr.ns.insns.*;
 
-public class NSFuncDef
+public class NSFuncDef extends NSAbstractMethod
 {
 
-    private String       name;
-    private List<NSType> types;
-    private List<String> paramNames;
+    public static final String ROOT_ID = "$";
+    private List<NSInsn>       insns;
 
     public NSFuncDef()
     {
-        types = new ArrayList<>();
-        paramNames = new ArrayList<>();
+        super();
+        insns = new ArrayList<NSInsn>();
     }
 
-    public NSFuncDef name(String name)
+    public List<NSInsn> instructions()
     {
-        this.name = name;
-        return this;
+        return insns;
     }
 
-    public List<String> paramNames()
+    @Override
+    public final void run(Stack<NSObject> vars)
     {
-        return paramNames;
-    }
-
-    public String name()
-    {
-        return name;
-    }
-
-    public List<NSType> types()
-    {
-        return types;
-    }
-
-    public String toString()
-    {
-        StringBuffer buffer = new StringBuffer();
-        buffer.append(name);
-        buffer.append('(');
-        for(int i = 0; i < types.size(); i++ )
-        {
-            buffer.append(types.get(i).getID());
-            buffer.append(" ");
-            buffer.append(paramNames.get(i));
-        }
-        buffer.append(')');
-        return buffer.toString();
+        ; // A user defined function is not allowed to directly use the values stack
     }
 
 }

@@ -39,4 +39,10 @@ public class NSBoolType extends NSType
         return null;
     }
 
+    @Override
+    public NSObject emptyObject()
+    {
+        return FALSE;
+    }
+
 }

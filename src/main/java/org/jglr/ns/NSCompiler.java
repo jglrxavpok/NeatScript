@@ -1,5 +1,6 @@
 package org.jglr.ns;
 
+import java.io.*;
 import java.util.*;
 
 import org.jglr.ns.compiler.*;
@@ -18,10 +19,13 @@ public class NSCompiler implements NSOps
     private int                      varId;
     private int                      currentVariable;
     private HashMap<String, Integer> varName2Id;
-    private String                   namespace;
+    private String                   namespace;       // FIXME: USE ME PLZ
     private NSFuncDef                currentMethodDef;
     private boolean                  inFunctionDef;
     private NSFuncDef                rootMethod;
+    private NSClass                  clazz;
+    private Stack<NSType>            typeStack;
+    private HashMap<String, NSType>  varName2Type;
 
     public NSCompiler()
     {
@@ -29,22 +33,32 @@ public class NSCompiler implements NSOps
         this.namespace = "std";
         labelBase = "L";
         varName2Id = new HashMap<>();
-        rootMethod = currentMethodDef = new NSFuncDef().name("$");
+        varName2Type = new HashMap<>();
+        rootMethod = currentMethodDef = (NSFuncDef) new NSFuncDef().name(NSFuncDef.ROOT_ID);
     }
 
-    public List<NSInsn> compile(String source) throws NSCompilerException
+    public NSClass compile(String name, String source) throws NSCompilerException, IOException
     {
-        this.source = source;
+        return compile(new NSSourceFile(name, new ByteArrayInputStream(source.getBytes())));
+    }
+
+    public NSClass compile(NSSourceFile source) throws NSCompilerException, IOException
+    {
+        this.clazz = new NSClass(source.name().substring(0, source.name().indexOf("."))).sourceFile(source.name());
+        clazz.rootMethod(rootMethod.owner(clazz.name()));
+        this.source = source.content();
         this.index = 0;
         this.line = 0;
         NSCodeToken nSCodeToken;
         ArrayList<NSCodeToken> tokenList = new ArrayList<NSCodeToken>();
-        ArrayList<NSInsn> finalInstructions = new ArrayList<>();
-        finalInstructions.add(new LineNumberInsn(1));
+        List<NSInsn> finalInstructions = null;
         int lineNumber = 1;
         while((nSCodeToken = nextToken()) != null)
         {
-            System.out.println(">> " + nSCodeToken.type.name() + " : " + nSCodeToken.content);
+            finalInstructions = currentMethodDef.instructions();
+            if(finalInstructions.isEmpty())
+                finalInstructions.add(new LineNumberInsn(1));
+            //            System.out.println(">> " + nSCodeToken.type.name() + " : " + nSCodeToken.content);
 
             if(nSCodeToken.type == NSTokenType.NEW_LINE)
             {
@@ -67,7 +81,51 @@ public class NSCompiler implements NSOps
         {
             throwCompilerError("Instruction stack isn't empty. Problem while reading the source code.");
         }
-        return finalInstructions;
+        // We analyse the function calls to find if the owner is this class or another
+        for(NSAbstractMethod m : clazz.methods())
+        {
+            if(m instanceof NSFuncDef)
+            {
+                NSFuncDef method = (NSFuncDef) m;
+                for(NSInsn insn : method.instructions())
+                {
+                    if(insn.getOpcode() == FUNCTION_CALL)
+                    {
+                        FunctionCallInsn callInsn = (FunctionCallInsn) insn;
+                        NSAbstractMethod calledMethod = null;
+                        try
+                        {
+                            calledMethod = clazz.method(callInsn.functionName(), callInsn.types());
+                        }
+                        catch(Exception e)
+                        {
+                            ; // We ignore this exception as there's one only if the method doesn't exist
+                        }
+
+                        if(calledMethod != null)
+                        {
+                            callInsn.functionOwner(clazz.name());
+                        }
+                        else
+                        {
+                            // TODO: Imports maybe ?
+                            callInsn.functionOwner("std");
+                            if(!callInsn.types().isEmpty())
+                            {
+                                NSType type = callInsn.types().get(0);
+                                if(type.functions().containsKey(callInsn.functionName()))
+                                {
+                                    callInsn.functionOwner(type.getID());
+                                }
+                                else
+                                    ; // TODO: Check for user-defined types
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return clazz;
     }
 
     private NSCodeToken nextToken() throws NSCompilerException
@@ -456,17 +514,20 @@ public class NSCompiler implements NSOps
         throw new NSCompilerException(string + " (at line " + line + ")");
     }
 
-    private void makeInstructions(ArrayList<NSCodeToken> tokenList, ArrayList<NSInsn> insnList) throws NSCompilerException
+    private void makeInstructions(ArrayList<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
     {
         insnList.add(new LabelInsn(new Label(nextLabelID())));
         pendingType = null;
+        typeStack = new Stack<>();
         if(tokenList.size() == 1)
         {
             NSCodeToken token = tokenList.remove(tokenList.size() - 1);
             if(token.type == NSTokenType.STRING)
             {
                 insnList.add(new LoadConstantInsn(token.content));
-                insnList.add(new FunctionCallInsn("print").functionOwner(namespace));
+                List<NSType> types = new ArrayList<>();
+                types.add(NSTypes.STRING_TYPE);
+                insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
             }
             else if(token.type == NSTokenType.WORD && !inFunctionDef)
             {
@@ -478,7 +539,9 @@ public class NSCompiler implements NSOps
                 if(vindex >= 0)
                 {
                     insnList.add(new NSVarInsn(VAR_LOAD, vindex));
-                    insnList.add(new FunctionCallInsn("print").functionOwner(namespace));
+                    List<NSType> types = new ArrayList<>();
+                    types.add(NSTypes.STRING_TYPE);
+                    insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
                 }
                 else
                 {
@@ -502,7 +565,7 @@ public class NSCompiler implements NSOps
         }
     }
 
-    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, ArrayList<NSInsn> insnList) throws NSCompilerException
+    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
     {
         switch(token.type)
         {
@@ -520,7 +583,7 @@ public class NSCompiler implements NSOps
                         return;
                     }
                 }
-                int vindex = 0;
+                int vindex = -1;
                 if(pendingType != null)
                 {
                     if(inFunctionDef)
@@ -531,6 +594,7 @@ public class NSCompiler implements NSOps
                     {
                         vindex = nextVarIndex();
                         insnList.add(new NewVarInsn(pendingType, token.content, vindex));
+                        varName2Type.put(token.content, pendingType);
                         varName2Id.put(token.content, vindex);
                     }
                     pendingType = null;
@@ -543,14 +607,19 @@ public class NSCompiler implements NSOps
                         vindex = varName2Id.get(token.content);
                     }
                 }
-                this.currentVariable = vindex;
-                insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                if(!inFunctionDef)
+                {
+                    this.currentVariable = vindex;
+                    insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                    typeStack.push(varName2Type.get(token.content));
+                }
             }
                 break;
 
             case STRING:
             {
                 insnList.add(new LoadConstantInsn(token.content));
+                typeStack.push(NSTypes.STRING_TYPE);
             }
                 break;
 
@@ -568,11 +637,7 @@ public class NSCompiler implements NSOps
                     else if(previous.getOpcode() == VAR_LOAD)
                     {
                         insnList.set(insnList.size() - 1, new LoadFieldInsn(tokenList.get(tokenIndex - 1).content));
-                    }
-                    else if(pendingType != null)
-                    {
-                        insnList.set(insnList.size() - 1, new LoadStaticFieldInsn(pendingType.getID(), tokenList.get(tokenIndex - 1).content));
-                        pendingType = null;
+                        typeStack.pop();
                     }
                 }
                 else if(operator == NSOperator.ASSIGNEMENT)
@@ -584,11 +649,18 @@ public class NSCompiler implements NSOps
                     else
                     {
                         insnList.add(new NSVarInsn(VAR_STORE, currentVariable));
+                        typeStack.pop();
                     }
                     currentVariable = -1;
                 }
                 else
+                {
+                    NSType lastType = typeStack.pop();
+                    NSType type = typeStack.pop(); // We get the type right before the last type loaded;
+                    NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
+                    typeStack.push(result.type());
                     insnList.add(new OperatorInsn(operator));
+                }
             }
                 break;
 
@@ -600,7 +672,7 @@ public class NSCompiler implements NSOps
                 }
                 else
                 {
-                    insnList.add(new FunctionCallInsn(token.content).functionOwner(namespace));
+                    insnList.add(new FunctionCallInsn(token.content).functionOwner(FunctionCallInsn.UNKNOWN_YET).types(typeStack));
                 }
             }
                 break;
@@ -640,12 +712,14 @@ public class NSCompiler implements NSOps
                     case TRUE:
                     {
                         insnList.add(new LoadConstantInsn(true));
+                        typeStack.push(NSTypes.BOOL_TYPE);
                     }
                         break;
 
                     case FALSE:
                     {
                         insnList.add(new LoadConstantInsn(false));
+                        typeStack.push(NSTypes.BOOL_TYPE);
                     }
                         break;
 
@@ -672,7 +746,8 @@ public class NSCompiler implements NSOps
                     case FUNCTION_DEF:
                     {
                         inFunctionDef = true;
-                        System.out.println("OY M8 ");
+                        currentMethodDef = (NSFuncDef) new NSFuncDef().owner(clazz.name());
+                        clazz.methods().add(currentMethodDef);
                     }
                         break;
 
@@ -680,8 +755,18 @@ public class NSCompiler implements NSOps
                     {
                         if(inFunctionDef)
                         {
-                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
+                            //                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
                             inFunctionDef = false;
+                            varId = 0;
+                            varName2Id.clear(); // TODO: Might need to push it before clearing it to save root method variables
+                            for(int i = 0; i < currentMethodDef.paramNames().size(); i++ )
+                            {
+                                String name = currentMethodDef.paramNames().get(i);
+                                NSType type = currentMethodDef.types().get(i);
+                                varName2Id.put(name, varId);
+                                varName2Type.put(name, type);
+                                //                                currentMethodDef.instructions().add(new NewVarInsn(type, name, nextVarIndex()));
+                            }
                         }
                         else
                             throwCompilerException("You must be defining a method to use a code block starting point");
