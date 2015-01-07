@@ -42,6 +42,18 @@ public class NSInterpreter implements NSOps, NSTypes
                 LineNumberInsn line = (LineNumberInsn) insn;
                 lineNumber = line.number();
             }
+            else if(insn.getOpcode() == ILOAD)
+            {
+                NSLoadIntInsn intInsn = (NSLoadIntInsn) insn;
+                int value = intInsn.value();
+                valuesStack.push(new NSObject(NSTypes.INT_TYPE, value));
+            }
+            else if(insn.getOpcode() == FLOAD)
+            {
+                NSLoadFloatInsn intInsn = (NSLoadFloatInsn) insn;
+                float value = intInsn.value();
+                valuesStack.push(new NSObject(NSTypes.FLOAT_TYPE, value));
+            }
             else if(insn.getOpcode() == LOAD_CONSTANT)
             {
                 LoadConstantInsn load = (LoadConstantInsn) insn;

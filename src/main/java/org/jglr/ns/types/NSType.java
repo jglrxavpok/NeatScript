@@ -58,6 +58,8 @@ public abstract class NSType
 
     public HashMap<String, NSNativeFunc> functions()
     {
+        if(functions == null)
+            functions = new HashMap<>();
         return functions;
     }
 

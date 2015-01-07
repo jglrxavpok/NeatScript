@@ -97,6 +97,16 @@ public interface NSOps
      */
     public static final int               RETURN_VALUE     = 0x11;
 
+    /**
+     * Pushes an integer to the values stack
+     */
+    public static final int               ILOAD            = 0x12;
+
+    /**
+     * Pushes an float to the values stack
+     */
+    public static final int               FLOAD            = 0x13;
+
     @Deprecated
     public static final int               GET_STATIC_FIELD = -1;
 

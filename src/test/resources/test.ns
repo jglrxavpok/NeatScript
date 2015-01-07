@@ -4,6 +4,8 @@ String txt = "Some text";
 String txt1 = "dzqdqz";
 print("Size of txt1 is "+txt1.length()+" via length()");
 print("Size of txt1 is "+txt1.size+" via size");
+Int nbr = 10;
+print(nbr);
 txt = "a";
 txt1;
 if(false) then

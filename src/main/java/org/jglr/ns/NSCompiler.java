@@ -139,6 +139,7 @@ public class NSCompiler implements NSOps
             char[] chars = source.toCharArray();
             StringBuffer buffer = new StringBuffer();
             boolean inString = false;
+            boolean inNumber = false;
             NSTokenType type = null;
             for(; index < chars.length; index++ )
             {
@@ -157,8 +158,15 @@ public class NSCompiler implements NSOps
                 }
                 else if(!inString)
                 {
-                    if((op = getOperator(buffer, chars)) != null)
+                    if(chars[index] >= '0' && chars[index] <= '9')
+                    {
+                        if(buffer.toString().isEmpty())
+                            inNumber = true;
+                    }
+                    else if(!(chars[index] == '.' && inNumber) && (op = getOperator(buffer, chars)) != null)
+                    {
                         return op;
+                    }
                     else if(chars[index] == ' ')
                     {
                         if(!buffer.toString().isEmpty())
@@ -587,35 +595,54 @@ public class NSCompiler implements NSOps
                         return;
                     }
                 }
-                int vindex = -1;
-                if(pendingType != null)
+                if(isNumber(token.content))
                 {
-                    if(inFunctionDef)
+                    try
                     {
-                        currentMethodDef.paramNames().add(token.content);
+                        int value = Integer.parseInt(token.content);
+                        insnList.add(new NSLoadIntInsn(value));
+                        return;
                     }
-                    else
+                    catch(Exception e)
                     {
-                        vindex = nextVarIndex();
-                        insnList.add(new NewVarInsn(pendingType, token.content, vindex));
-                        varName2Type.put(token.content, pendingType);
-                        varName2Id.put(token.content, vindex);
+                        ;
                     }
-                    pendingType = null;
+
+                    float value = Float.parseFloat(token.content);
+                    insnList.add(new NSLoadFloatInsn(value));
                 }
                 else
                 {
-                    vindex = -1;
-                    if(varName2Id.containsKey(token.content))
+                    int vindex = -1;
+                    if(pendingType != null)
                     {
-                        vindex = varName2Id.get(token.content);
+                        if(inFunctionDef)
+                        {
+                            currentMethodDef.paramNames().add(token.content);
+                        }
+                        else
+                        {
+                            vindex = nextVarIndex();
+                            insnList.add(new NewVarInsn(pendingType, token.content, vindex));
+                            varName2Type.put(token.content, pendingType);
+                            varName2Id.put(token.content, vindex);
+                        }
+                        pendingType = null;
                     }
-                }
-                if(!inFunctionDef)
-                {
-                    this.currentVariable = vindex;
-                    insnList.add(new NSVarInsn(VAR_LOAD, vindex));
-                    typeStack.push(varName2Type.get(token.content));
+                    else
+                    {
+                        vindex = -1;
+                        if(varName2Id.containsKey(token.content))
+                        {
+                            vindex = varName2Id.get(token.content);
+                        }
+                    }
+                    if(!inFunctionDef)
+                    {
+                        this.currentVariable = vindex;
+                        insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                        typeStack.push(varName2Type.get(token.content));
+                    }
                 }
             }
                 break;
@@ -823,6 +850,30 @@ public class NSCompiler implements NSOps
             default:
                 break;
         }
+    }
+
+    private boolean isNumber(String content)
+    {
+        try
+        {
+            Integer.parseInt(content);
+            return true;
+        }
+        catch(Exception e)
+        {
+            ;
+        }
+
+        try
+        {
+            Float.parseFloat(content);
+            return true;
+        }
+        catch(Exception e)
+        {
+            ;
+        }
+        return false;
     }
 
     private int nextVarIndex()
