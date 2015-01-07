@@ -26,6 +26,8 @@ public class NSCompiler implements NSOps
     private NSClass                  clazz;
     private Stack<NSType>            typeStack;
     private HashMap<String, NSType>  varName2Type;
+    private Stack<CompilerState>     states;
+    private Stack<LoopStartingPoint> loopStartStack;
 
     public NSCompiler()
     {
@@ -34,6 +36,8 @@ public class NSCompiler implements NSOps
         labelBase = "L";
         varName2Id = new HashMap<>();
         varName2Type = new HashMap<>();
+        states = new Stack<>();
+        loopStartStack = new Stack<>();
         rootMethod = currentMethodDef = (NSFuncDef) new NSFuncDef().name(NSFuncDef.ROOT_ID);
     }
 
@@ -58,7 +62,7 @@ public class NSCompiler implements NSOps
             finalInstructions = currentMethodDef.instructions();
             if(finalInstructions.isEmpty())
                 finalInstructions.add(new LineNumberInsn(1));
-            //            System.out.println(">> " + nSCodeToken.type.name() + " : " + nSCodeToken.content);
+            System.out.println(">> " + nSCodeToken.type.name() + " : " + nSCodeToken.content);
 
             if(nSCodeToken.type == NSTokenType.NEW_LINE)
             {
@@ -688,6 +692,7 @@ public class NSCompiler implements NSOps
                         insnList.add(new StackInsn(STACK_PEEK));
                         insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
                         pushLabelID();
+                        loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.IF));
                     }
                         break;
 
@@ -698,6 +703,7 @@ public class NSCompiler implements NSOps
                         insnList.add(new StackInsn(STACK_PEEK));
                         insnList.add(new LabelInsn(IF_GOTO, new Label(getCurrentLabelID())));
                         pushLabelID();
+                        loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.ELSE));
                     }
                         break;
 
@@ -705,6 +711,13 @@ public class NSCompiler implements NSOps
                     {
                         insnList.add(new StackInsn(STACK_POP));
                         insnList.add(new NSInsn(POP));
+                        LoopStartingPoint point = loopStartStack.pop();
+                        if(point.type() == NSKeywords.WHILE)
+                        {
+                            insnList.add(new LabelInsn(GOTO, new Label(point.labelID())));
+                        }
+                        else
+                            ;
                         popLabelID();
                     }
                         break;
@@ -743,9 +756,20 @@ public class NSCompiler implements NSOps
                     }
                         break;
 
+                    case WHILE:
+                    {
+                        loopStartStack.push(new LoopStartingPoint(getPreviousLabelID(), NSKeywords.WHILE));
+                        insnList.add(new StackInsn(STACK_PUSH));
+                        insnList.add(new StackInsn(STACK_PEEK));
+                        insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
+                        pushLabelID();
+                    }
+                        break;
+
                     case FUNCTION_DEF:
                     {
                         inFunctionDef = true;
+                        pushState();
                         currentMethodDef = (NSFuncDef) new NSFuncDef().owner(clazz.name());
                         clazz.methods().add(currentMethodDef);
                     }
@@ -775,7 +799,18 @@ public class NSCompiler implements NSOps
 
                     case CODE_BLOCK_END:
                     {
-                        currentMethodDef = rootMethod;
+                        popState();
+                    }
+                        break;
+
+                    case RETURN:
+                    {
+                        if(typeStack != null)
+                        {
+                            insnList.add(new NSInsn(RETURN_VALUE));
+                        }
+                        else
+                            insnList.add(new NSInsn(RETURN));
                     }
                         break;
 
@@ -813,6 +848,11 @@ public class NSCompiler implements NSOps
         labelID = 0;
     }
 
+    private String getPreviousLabelID()
+    {
+        return labelBase + (labelID - 1);
+    }
+
     private String getCurrentLabelID()
     {
         return labelBase + labelID;
@@ -821,5 +861,26 @@ public class NSCompiler implements NSOps
     private String nextLabelID()
     {
         return labelBase + (labelID++ );
+    }
+
+    private void pushState()
+    {
+        states.push(new CompilerState(varName2Id, varName2Type, varId, labelBase, labelID, currentMethodDef));
+        varName2Id.clear();
+        varName2Type.clear();
+        varId = 0;
+        labelBase = "L";
+        labelID = 0;
+    }
+
+    private void popState()
+    {
+        CompilerState state = states.pop();
+        varName2Id = state.varNamesToIds();
+        varName2Type = state.varNamesToTypes();
+        varId = state.varID();
+        labelID = state.labelID();
+        labelBase = state.labelBase();
+        currentMethodDef = state.currentMethodDef();
     }
 }

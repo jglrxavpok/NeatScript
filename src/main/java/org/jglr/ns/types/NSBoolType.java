@@ -25,6 +25,10 @@ public class NSBoolType extends NSType
     {
         if(operator == NSOperator.EQUALITY_CHECK)
         {
+            if(a == TRUE || b == TRUE || a == FALSE || b == FALSE)
+            {
+                return a == b ? TRUE : FALSE;
+            }
             if(a.value() == null && b.value() == null)
                 return TRUE;
             else if(a.value() == null && b.value() != null || a.value() != null && b.value() == null)

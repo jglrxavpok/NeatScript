@@ -16,13 +16,19 @@ else then
 		"That never happens";
 	end
 end
-print("Value of txt at end: "+txt);
-"End of program!";
-prettify("TEST PRETTIFY", "TEST");
-prettify("Second prettify", "second");
-prettify("lol", "hi");
 
-function prettify(String txt 
-				  String t2) {
-	print("$$ "+txt+" $$"+t2);
+while(false) then
+	print("Value of txt at end: "+txt);
+end
+
+"End of program!";
+print(prettify("TEST PRETTIFY"));
+print(prettify("Second prettify"));
+print(prettify("lol"));
+
+function prettify(String txt) 
+{
+	return "$$ "+txt+" $$"; 
 }
+
+"Hello!";

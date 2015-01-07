@@ -7,7 +7,8 @@ public enum NSKeywords
     TRUE("true", 2000), FALSE("false", 2000),
     NAMESPACE("namespace"),
     FUNCTION_DEF("function", true),
-    CODE_BLOCK_START("{", true), CODE_BLOCK_END("}", true);
+    CODE_BLOCK_START("{", true), CODE_BLOCK_END("}", true),
+    RETURN("return"), WHILE("while");
 
     private String  keyword;
     private int     precedence;

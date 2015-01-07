@@ -19,7 +19,7 @@ public class NSInterpreter implements NSOps, NSTypes
         NSOps.initAllNames();
     }
 
-    public void interpret(List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
+    public NSObject interpret(List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
     {
         int index = 0;
         Stack<NSObject> heapStack = new Stack<>();
@@ -52,8 +52,19 @@ public class NSInterpreter implements NSOps, NSTypes
                     type = STRING_TYPE;
                 }
                 else if(cst instanceof Boolean)
+                {
                     type = BOOL_TYPE; // TODO: True type verification
+                    Boolean b = (Boolean) cst;
+                    valuesStack.push(b ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE);
+                    continue;
+                }
                 valuesStack.push(new NSObject(type, cst));
+            }
+            else if(insn.getOpcode() == GOTO)
+            {
+                LabelInsn jumpInsn = (LabelInsn) insn;
+                index = gotoLabel(insns, index, jumpInsn.label()) - 1;
+                System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
             }
             else if(insn.getOpcode() == IF_NOT_GOTO || insn.getOpcode() == IF_GOTO)
             {
@@ -157,12 +168,21 @@ public class NSInterpreter implements NSOps, NSTypes
                 method.owner(owner);
                 vm.methodCall(method, valuesStack);
             }
+            else if(insn.getOpcode() == RETURN)
+            {
+                return null;
+            }
+            else if(insn.getOpcode() == RETURN_VALUE)
+            {
+                return valuesStack.pop();
+            }
         }
+        return null;
     }
 
     private int gotoLabel(List<NSInsn> insns, int startIndex, Label label)
     {
-        for(int i = startIndex; i < insns.size(); i++ )
+        for(int i = 0; i < insns.size(); i++ )
         {
             NSInsn insn = insns.get(i);
             if(insn.getOpcode() == LABEL)

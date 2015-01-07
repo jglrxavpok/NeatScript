@@ -82,13 +82,23 @@ public interface NSOps
      */
     public static final int               GET_FIELD        = 0xE;
 
-    @Deprecated
-    public static final int               GET_STATIC_FIELD = 0xF;
-
     /**
      * Pops the value on top of the values stack 
      */
-    public static final int               POP              = 0x10;
+    public static final int               POP              = 0xF;
+
+    /**
+     * Immediately break out of the current method
+     */
+    public static final int               RETURN           = 0x10;
+
+    /**
+     * Immediately break out of the current method and add a value to the values stack
+     */
+    public static final int               RETURN_VALUE     = 0x11;
+
+    @Deprecated
+    public static final int               GET_STATIC_FIELD = -1;
 
     static final HashMap<Integer, String> names            = new HashMap<>();
 

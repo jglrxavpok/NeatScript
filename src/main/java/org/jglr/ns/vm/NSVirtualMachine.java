@@ -5,6 +5,7 @@ import java.util.*;
 import org.jglr.ns.*;
 import org.jglr.ns.compiler.*;
 import org.jglr.ns.funcs.*;
+import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
 
 public class NSVirtualMachine
@@ -44,6 +45,7 @@ public class NSVirtualMachine
         this.entry = clazz;
         this.currentClass = entry;
         classes.put(clazz.name(), clazz);
+        printContent(clazz);
     }
 
     public void launch() throws NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
@@ -89,7 +91,11 @@ public class NSVirtualMachine
                     NSObject object = valueStack.pop();
                     vars[i] = new NSVariable(object.type(), func.paramNames().get(i), i).value(object);
                 }
-                interpreter.interpret(((NSFuncDef) func).instructions(), vars);
+                NSObject object = interpreter.interpret(((NSFuncDef) func).instructions(), vars);
+                if(object != null)
+                {
+                    valueStack.push(object);
+                }
             }
             else
             {
@@ -137,7 +143,52 @@ public class NSVirtualMachine
 
     private NSClass loadClass(String classID) throws NSClassNotFoundException
     {
-        return classLoader.loadClass(classID);
+        NSClass clazz = classLoader.loadClass(classID);
+        printContent(clazz);
+        classes.put(classID, clazz);
+        return clazz;
+    }
+
+    private void printContent(NSClass clazz)
+    {
+        StringBuffer buffer = new StringBuffer();
+        String indent = "";
+        buffer.append(clazz.name() + "(" + clazz.sourceFile() + ")");
+        indent += " ";
+        buffer.append('\n');
+        buffer.append('{');
+        buffer.append('\n');
+        for(NSAbstractMethod method : clazz.methods())
+        {
+            buffer.append(indent + method.toString());
+            indent += " ";
+            if(method instanceof NSNativeFunc)
+            {
+                buffer.append(indent + "Native code");
+            }
+            else if(method instanceof NSFuncDef)
+            {
+                NSFuncDef def = (NSFuncDef) method;
+                for(NSInsn insn : def.instructions())
+                {
+                    buffer.append('\n');
+                    if(insn.getOpcode() == NSOps.LABEL)
+                    {
+                        buffer.append(indent + insn.toString());
+                    }
+                    else
+                    {
+                        buffer.append(indent + "   " + insn.toString());
+                    }
+                }
+                indent.replaceFirst(" ", "");
+                buffer.append('\n');
+            }
+            indent.replaceFirst(" ", "");
+            buffer.append('\n');
+        }
+        buffer.append('}');
+        System.out.println(buffer.toString());
     }
 
     private boolean isLoaded(String owner)
