@@ -601,6 +601,7 @@ public class NSCompiler implements NSOps
                     {
                         int value = Integer.parseInt(token.content);
                         insnList.add(new NSLoadIntInsn(value));
+                        typeStack.push(NSTypes.INT_TYPE);
                         return;
                     }
                     catch(Exception e)
@@ -610,6 +611,7 @@ public class NSCompiler implements NSOps
 
                     float value = Float.parseFloat(token.content);
                     insnList.add(new NSLoadFloatInsn(value));
+                    typeStack.push(NSTypes.FLOAT_TYPE);
                 }
                 else
                 {
@@ -687,7 +689,7 @@ public class NSCompiler implements NSOps
                 else
                 {
                     NSType lastType = typeStack.pop();
-                    NSType type = typeStack.pop(); // We get the type right before the last type loaded;
+                    NSType type = typeStack.pop(); // We get the type right before the last type loaded
                     NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
                     typeStack.push(result.type());
                     insnList.add(new OperatorInsn(operator));

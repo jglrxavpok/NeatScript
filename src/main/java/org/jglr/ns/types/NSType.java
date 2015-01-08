@@ -41,6 +41,19 @@ public abstract class NSType
             else
                 return NSTypes.BOOL_TYPE.FALSE;
         }
+        else if(operator == NSOperator.NON_EQUALITY_CHECK)
+        {
+            if(a.value() == null && b.value() == null)
+                return NSTypes.BOOL_TYPE.FALSE;
+            else if(a.value() == null && b.value() != null || a.value() != null && b.value() == null)
+                return NSTypes.BOOL_TYPE.TRUE;
+            else if(a.value().equals(b.value()))
+            {
+                return NSTypes.BOOL_TYPE.FALSE;
+            }
+            else
+                return NSTypes.BOOL_TYPE.TRUE;
+        }
         return null;
     }
 

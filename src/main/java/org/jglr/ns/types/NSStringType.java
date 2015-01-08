@@ -49,8 +49,7 @@ public class NSStringType extends NSType
         {
             return new NSObject(NSTypes.BOOL_TYPE, !a.value().equals(b.value()));
         }
-        // TODO: Split Operator '/'
-        throw new UnsupportedOperationException("Operator not supported: " + operator.toString());
+        return super.operation(a, b, operator);
     }
 
     @Override

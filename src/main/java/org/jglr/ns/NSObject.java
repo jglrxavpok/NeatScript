@@ -68,4 +68,9 @@ public class NSObject
         return object;
     }
 
+    public Object castedValue(NSType type)
+    {
+        return this.type.cast(object, type);
+    }
+
 }

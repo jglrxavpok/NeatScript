@@ -18,7 +18,7 @@ public enum NSOperator
     GREATER_THAN(">", 6),
     GEQUAL(">=", 6),
     LEQUAL("<=", 6),
-    ASSIGNEMENT("=", 14),
+    ASSIGNEMENT("=", 1),
     NON_EQUALITY_CHECK("!=", 7),
     EQUALITY_CHECK("==", 7),
     UNSIGNED_RIGHT_SHIFT(">>>", 5),
