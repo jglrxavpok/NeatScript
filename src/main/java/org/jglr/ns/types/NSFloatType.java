@@ -5,10 +5,9 @@ import org.jglr.ns.*;
 public class NSFloatType extends NSType
 {
 
-    @Override
-    public String getID()
+    public NSFloatType()
     {
-        return "Float";
+        super("Float");
     }
 
     @Override

@@ -50,4 +50,10 @@ public enum NSKeywords
     {
         return newLabel;
     }
+
+    public NSKeywords raw(String raw)
+    {
+        this.keyword = raw;
+        return this;
+    }
 }

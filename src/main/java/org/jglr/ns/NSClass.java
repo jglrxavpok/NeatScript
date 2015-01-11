@@ -54,7 +54,9 @@ public class NSClass
             if(method.name().equals(methodName))
             {
                 if(types.size() != method.types().size())
+                {
                     continue;
+                }
                 for(int i = 0; i < types.size(); i++ )
                 {
                     if(!types.get(i).getID().equals(method.types().get(i).getID()))

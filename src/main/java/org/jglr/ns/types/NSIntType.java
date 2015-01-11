@@ -5,10 +5,9 @@ import org.jglr.ns.*;
 public class NSIntType extends NSType
 {
 
-    @Override
-    public String getID()
+    public NSIntType()
     {
-        return "Int";
+        super("Int");
     }
 
     public NSObject operation(NSObject a, NSObject b, NSOperator operator)

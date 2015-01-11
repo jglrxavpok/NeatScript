@@ -10,6 +10,7 @@ public class NSStringType extends NSType
 
     public NSStringType()
     {
+        super("String");
         newFunction("length", new NSNativeFunc("length")
         {
 
@@ -22,12 +23,6 @@ public class NSStringType extends NSType
                 vars.push(new NSObject(NSTypes.STRING_TYPE, "" + length));
             }
         });
-    }
-
-    @Override
-    public String getID()
-    {
-        return "String";
     }
 
     @Override

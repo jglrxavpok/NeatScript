@@ -12,9 +12,9 @@ public class BaseClassLoader extends NSClassLoader
     @Override
     public NSClass loadClass(String className) throws NSClassNotFoundException
     {
-        if(className.equals("String"))
+        if(className.equals(NSTypes.STRING_TYPE.getID()))
         {
-            NSNativeClass clazz = new NSNativeClass("String");
+            NSNativeClass clazz = new NSNativeClass(NSTypes.STRING_TYPE.getID());
             NSNativeFunc lengthFunc = new NSNativeFunc("length")
             {
 

@@ -10,14 +10,9 @@ public class NSBoolType extends NSType
 
     public NSBoolType()
     {
+        super("Bool");
         TRUE = new NSObject(this, true);
         FALSE = new NSObject(this, false);
-    }
-
-    @Override
-    public String getID()
-    {
-        return "Bool";
     }
 
     @Override

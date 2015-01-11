@@ -6,10 +6,10 @@ import org.jglr.ns.*;
 
 public interface NSTypes
 {
-    public static final NSType      STRING_TYPE = new NSStringType();
-    public static final NSBoolType  BOOL_TYPE   = new NSBoolType();
-    public static final NSFloatType FLOAT_TYPE  = new NSFloatType();
-    public static final NSIntType   INT_TYPE    = new NSIntType();
+    public static NSType      STRING_TYPE = new NSStringType();
+    public static NSBoolType  BOOL_TYPE   = new NSBoolType();
+    public static NSFloatType FLOAT_TYPE  = new NSFloatType();
+    public static NSIntType   INT_TYPE    = new NSIntType();
 
     public static NSType getPriorityType(NSObject value, NSType a, NSType b)
     {

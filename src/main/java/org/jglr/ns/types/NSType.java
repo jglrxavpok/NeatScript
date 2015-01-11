@@ -9,6 +9,13 @@ public abstract class NSType
 {
 
     private HashMap<String, NSNativeFunc> functions;
+    private String                        id;
+
+    public NSType(String id)
+    {
+        this.id = id;
+        functions = new HashMap<>();
+    }
 
     public boolean isCastable(NSType type)
     {
@@ -24,7 +31,10 @@ public abstract class NSType
         throw new UnsupportedOperationException(getID() + " is not castable to " + type.getID());
     }
 
-    public abstract String getID();
+    public String getID()
+    {
+        return id;
+    }
 
     public NSObject operation(NSObject a, NSObject b, NSOperator operator)
     {
@@ -64,17 +74,18 @@ public abstract class NSType
 
     public void newFunction(String id, NSNativeFunc function)
     {
-        if(functions == null)
-            functions = new HashMap<>();
         functions.put(id, function);
     }
 
     public HashMap<String, NSNativeFunc> functions()
     {
-        if(functions == null)
-            functions = new HashMap<>();
         return functions;
     }
 
     public abstract NSObject emptyObject();
+
+    public void setID(String string)
+    {
+        this.id = string;
+    }
 }

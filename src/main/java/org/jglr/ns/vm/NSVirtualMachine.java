@@ -221,4 +221,9 @@ public class NSVirtualMachine
             throw new NSNoSuchMethodException("std", functionName, new ArrayList<NSType>());
     }
 
+    public void newStdFunction(String name, NSNativeFunc method)
+    {
+        functions.put(name, method);
+    }
+
 }
