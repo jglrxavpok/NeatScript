@@ -10,7 +10,7 @@ public class NSStringType extends NSType
 
     public NSStringType()
     {
-        super("String");
+        super("String", NSTypes.OBJECT_TYPE);
         newFunction("length", new NSNativeFunc("length")
         {
 

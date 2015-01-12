@@ -7,7 +7,7 @@ public class NSFloatType extends NSType
 
     public NSFloatType()
     {
-        super("Float");
+        super("Float", NSTypes.OBJECT_TYPE);
     }
 
     @Override

@@ -7,7 +7,7 @@ public class NSIntType extends NSType
 
     public NSIntType()
     {
-        super("Int");
+        super("Int", NSTypes.OBJECT_TYPE);
     }
 
     public NSObject operation(NSObject a, NSObject b, NSOperator operator)

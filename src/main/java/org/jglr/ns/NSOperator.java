@@ -64,4 +64,14 @@ public enum NSOperator
         return list;
     }
 
+    public static NSOperator fromID(String id)
+    {
+        for(NSOperator op : values())
+        {
+            if(op.string.equals(id))
+                return op;
+        }
+        return null;
+    }
+
 }

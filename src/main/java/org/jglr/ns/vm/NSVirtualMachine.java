@@ -25,7 +25,7 @@ public class NSVirtualMachine
         this.interpreter = new NSInterpreter(this);
         stackTrace = new Stack<>();
         classes = new HashMap<>();
-        classLoader = new BaseClassLoader();
+        classLoader = new BaseClassLoader(new NSClassParser(this));
 
         functions = new HashMap<>();
         functions.put("print", new NSNativeFunc("print")
@@ -224,6 +224,18 @@ public class NSVirtualMachine
     public void newStdFunction(String name, NSNativeFunc method)
     {
         functions.put(name, method);
+    }
+
+    public NSType getType(String typeID, NSClass caller) throws NSClassNotFoundException
+    {
+        for(NSType type : NSTypes.list())
+        {
+            if(type.getID().equals(typeID))
+                return type;
+        }
+        NSType type = new NSClassType(getOrLoad(typeID));
+        NSTypes.list().add(type);
+        return type;
     }
 
 }

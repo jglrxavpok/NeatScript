@@ -1,5 +1,6 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
 import java.util.*;
 
 import org.jglr.ns.types.*;
@@ -56,6 +57,22 @@ public class FunctionCallInsn extends NSInsn
     public List<NSType> types()
     {
         return types;
+    }
+
+    @Override
+    public NSInsn write(DataOutput out) throws IOException
+    {
+        out.writeUTF(name);
+        out.writeUTF(owner);
+        return this;
+    }
+
+    @Override
+    public NSInsn read(DataInput in) throws IOException
+    {
+        name = in.readUTF();
+        owner = in.readUTF();
+        return this;
     }
 
 }

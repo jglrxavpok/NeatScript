@@ -2,10 +2,10 @@ package org.jglr.ns.insns;
 
 import java.io.*;
 
-public class StackInsn extends NSInsn
+public class NSBaseInsn extends NSInsn
 {
 
-    public StackInsn(int opcode)
+    public NSBaseInsn(int opcode)
     {
         super(opcode);
     }

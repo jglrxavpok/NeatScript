@@ -1,5 +1,7 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
+
 public class NSLoadIntInsn extends NSInsn
 {
 
@@ -14,6 +16,20 @@ public class NSLoadIntInsn extends NSInsn
     public int value()
     {
         return value;
+    }
+
+    @Override
+    public NSInsn write(DataOutput out) throws IOException
+    {
+        out.writeInt(value);
+        return this;
+    }
+
+    @Override
+    public NSInsn read(DataInput in) throws IOException
+    {
+        value = in.readInt();
+        return this;
     }
 
 }

@@ -1,5 +1,7 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
+
 public class NSVarInsn extends NSInsn
 {
 
@@ -19,5 +21,19 @@ public class NSVarInsn extends NSInsn
     public String toString()
     {
         return super.toString() + " " + varIndex;
+    }
+
+    @Override
+    public NSInsn write(DataOutput out) throws IOException
+    {
+        out.writeInt(varIndex);
+        return this;
+    }
+
+    @Override
+    public NSInsn read(DataInput in) throws IOException
+    {
+        varIndex = in.readInt();
+        return this;
     }
 }

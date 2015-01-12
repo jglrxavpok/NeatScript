@@ -10,7 +10,7 @@ public class NSBoolType extends NSType
 
     public NSBoolType()
     {
-        super("Bool");
+        super("Bool", NSTypes.OBJECT_TYPE);
         TRUE = new NSObject(this, true);
         FALSE = new NSObject(this, false);
     }

@@ -1,5 +1,7 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
+
 import org.jglr.ns.*;
 
 public class OperatorInsn extends NSInsn
@@ -21,6 +23,20 @@ public class OperatorInsn extends NSInsn
     public String toString()
     {
         return super.toString() + " " + operator.toString();
+    }
+
+    @Override
+    public NSInsn write(DataOutput out) throws IOException
+    {
+        out.writeUTF(operator.toString());
+        return this;
+    }
+
+    @Override
+    public NSInsn read(DataInput in) throws IOException
+    {
+        operator = NSOperator.fromID(in.readUTF());
+        return this;
     }
 
 }

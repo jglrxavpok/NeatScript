@@ -34,3 +34,6 @@ function prettify(String txt)
 }
 
 "Hello!";
+
+Object testObject = "TestObjectText";
+print(testObject);

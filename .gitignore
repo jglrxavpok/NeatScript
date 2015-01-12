@@ -17,3 +17,4 @@ build/
 bin/
 .project
 .classpath
+*.nsc

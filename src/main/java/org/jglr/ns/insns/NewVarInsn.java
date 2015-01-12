@@ -30,4 +30,5 @@ public class NewVarInsn extends NSVarInsn
         return super.toString() + " " + type().getID() + " " + name();
     }
 
+    // TODO: Read/Write
 }

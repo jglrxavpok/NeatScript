@@ -62,7 +62,6 @@ public class NSCompiler implements NSOps
             finalInstructions = currentMethodDef.instructions();
             if(finalInstructions.isEmpty())
                 finalInstructions.add(new LineNumberInsn(1));
-            System.out.println(">> " + nSCodeToken.type.name() + " : " + nSCodeToken.content);
 
             if(nSCodeToken.type == NSTokenType.NEW_LINE)
             {
@@ -579,6 +578,7 @@ public class NSCompiler implements NSOps
 
     private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
     {
+        System.out.println(">> " + token.type.name() + " : " + token.content);
         switch(token.type)
         {
             case WORD:
@@ -739,7 +739,7 @@ public class NSCompiler implements NSOps
                     case END:
                     {
                         insnList.add(new StackInsn(STACK_POP));
-                        insnList.add(new NSInsn(POP));
+                        insnList.add(new NSBaseInsn(POP));
                         LoopStartingPoint point = loopStartStack.pop();
                         if(point.type() == NSKeywords.WHILE)
                         {
@@ -836,10 +836,10 @@ public class NSCompiler implements NSOps
                     {
                         if(typeStack != null)
                         {
-                            insnList.add(new NSInsn(RETURN_VALUE));
+                            insnList.add(new NSBaseInsn(RETURN_VALUE));
                         }
                         else
-                            insnList.add(new NSInsn(RETURN));
+                            insnList.add(new NSBaseInsn(RETURN));
                     }
                         break;
 

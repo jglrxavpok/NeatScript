@@ -12,11 +12,24 @@ public class NSClass
     private List<NSAbstractMethod> methodsDef;
     private NSAbstractMethod       rootMethod;
     private String                 sourceFile;
+    private String                 superclass;
 
     public NSClass(String name)
     {
         this.name = name;
         methodsDef = new ArrayList<NSAbstractMethod>();
+        superclass("Object");
+    }
+
+    public String superclass()
+    {
+        return superclass;
+    }
+
+    public NSClass superclass(String superclass)
+    {
+        this.superclass = superclass;
+        return this;
     }
 
     public NSAbstractMethod rootMethod()

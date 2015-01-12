@@ -1,8 +1,10 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
+
 import org.jglr.ns.*;
 
-public class NSInsn implements NSOps
+public abstract class NSInsn implements NSOps
 {
     private int opcode;
 
@@ -20,4 +22,8 @@ public class NSInsn implements NSOps
     {
         return NSOps.name(opcode);
     }
+
+    public abstract NSInsn write(DataOutput out) throws IOException;
+
+    public abstract NSInsn read(DataInput in) throws IOException;
 }

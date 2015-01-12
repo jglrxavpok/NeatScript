@@ -1,5 +1,7 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
+
 public class LoadFieldInsn extends NSInsn
 {
 
@@ -24,6 +26,20 @@ public class LoadFieldInsn extends NSInsn
     public String toString()
     {
         return super.toString() + " " + fieldName;
+    }
+
+    @Override
+    public NSInsn write(DataOutput out) throws IOException
+    {
+        out.writeUTF(fieldName);
+        return this;
+    }
+
+    @Override
+    public NSInsn read(DataInput in) throws IOException
+    {
+        fieldName = in.readUTF();
+        return this;
     }
 
 }

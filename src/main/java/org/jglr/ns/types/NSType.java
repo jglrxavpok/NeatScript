@@ -10,23 +10,37 @@ public abstract class NSType
 
     private HashMap<String, NSNativeFunc> functions;
     private String                        id;
+    private NSType                        supertype;
 
-    public NSType(String id)
+    public NSType(String id, NSType supertype)
     {
         this.id = id;
         functions = new HashMap<>();
+        this.supertype = supertype;
+        if(supertype != null)
+            functions.putAll(supertype.functions());
+    }
+
+    public NSType supertype()
+    {
+        return supertype;
     }
 
     public boolean isCastable(NSType type)
     {
         if(type == this)
             return true;
+        if(supertype != null)
+        {
+            if(supertype.isCastable(type))
+                return true;
+        }
         return false;
     }
 
     public Object cast(Object value, NSType type)
     {
-        if(type == this)
+        if(isCastable(type))
             return value;
         throw new UnsupportedOperationException(getID() + " is not castable to " + type.getID());
     }
@@ -64,11 +78,15 @@ public abstract class NSType
             else
                 return NSTypes.BOOL_TYPE.TRUE;
         }
+        if(supertype != null)
+            return supertype.operation(a, b, operator);
         return null;
     }
 
     public NSType init(NSObject object)
     {
+        if(supertype != null)
+            supertype.init(object);
         return this;
     }
 

@@ -1,5 +1,6 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
 
 public class LineNumberInsn extends NSInsn
 {
@@ -20,5 +21,19 @@ public class LineNumberInsn extends NSInsn
     public String toString()
     {
         return super.toString() + " " + lineNumber;
+    }
+
+    @Override
+    public NSInsn write(DataOutput out) throws IOException
+    {
+        out.writeInt(lineNumber);
+        return this;
+    }
+
+    @Override
+    public NSInsn read(DataInput in) throws IOException
+    {
+        lineNumber = in.readInt();
+        return this;
     }
 }

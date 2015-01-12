@@ -10,6 +10,7 @@ public interface NSTypes
     public static NSBoolType  BOOL_TYPE   = new NSBoolType();
     public static NSFloatType FLOAT_TYPE  = new NSFloatType();
     public static NSIntType   INT_TYPE    = new NSIntType();
+    public static NSType      OBJECT_TYPE = new NSObjectType();
 
     public static NSType getPriorityType(NSObject value, NSType a, NSType b)
     {
@@ -43,6 +44,7 @@ public interface NSTypes
             list.add(BOOL_TYPE);
             list.add(INT_TYPE);
             list.add(FLOAT_TYPE);
+            list.add(OBJECT_TYPE);
         }
         return list;
     }
