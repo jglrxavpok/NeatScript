@@ -1,6 +1,9 @@
 package org.jglr.ns.insns;
 
+import java.io.*;
+
 import org.jglr.ns.types.*;
+import org.jglr.ns.vm.*;
 
 public class NewVarInsn extends NSVarInsn
 {
@@ -30,5 +33,26 @@ public class NewVarInsn extends NSVarInsn
         return super.toString() + " " + type().getID() + " " + name();
     }
 
-    // TODO: Read/Write
+    public NSInsn write(DataOutput output) throws IOException
+    {
+        super.write(output);
+        output.writeUTF(name);
+        output.writeUTF(type.getID());
+        return this;
+    }
+
+    public NSInsn read(NSVirtualMachine vm, DataInput input) throws IOException
+    {
+        super.read(vm, input);
+        name = input.readUTF();
+        try
+        {
+            type = vm.getType(input.readUTF());
+        }
+        catch(NSClassNotFoundException e)
+        {
+            e.printStackTrace();
+        }
+        return this;
+    }
 }

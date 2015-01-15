@@ -29,16 +29,16 @@ public class NSIntType extends NSType
                 return new NSObject(this, (int) ((int) a.value() / (float) b.castedValue(NSTypes.FLOAT_TYPE)));
 
             case GREATER_THAN:
-                return new NSObject(NSTypes.BOOL_TYPE, (int) a.value() > (float) b.castedValue(NSTypes.FLOAT_TYPE));
+                return (int) a.value() > (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             case LESS_THAN:
-                return new NSObject(NSTypes.BOOL_TYPE, (int) a.value() < (float) b.castedValue(NSTypes.FLOAT_TYPE));
+                return (int) a.value() < (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             case GEQUAL:
-                return new NSObject(NSTypes.BOOL_TYPE, (int) a.value() >= (float) b.castedValue(NSTypes.FLOAT_TYPE));
+                return (int) a.value() >= (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             case LEQUAL:
-                return new NSObject(NSTypes.BOOL_TYPE, (int) a.value() <= (float) b.castedValue(NSTypes.FLOAT_TYPE));
+                return (int) a.value() <= (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             case LEFT_SHIFT:
                 return new NSObject(this, (int) ((int) a.value() << (int) b.castedValue(this)));

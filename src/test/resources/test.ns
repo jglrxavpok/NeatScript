@@ -19,8 +19,10 @@ else then
 	end
 end
 
-while(false) then
-	print("Value of txt at end: "+txt);
+Int i = 0;
+while(i < 10) then
+	print("Value of i: "+(i++));
+	// Comment
 end
 
 "End of program!";

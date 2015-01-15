@@ -22,7 +22,9 @@ public enum NSOperator
     NON_EQUALITY_CHECK("!=", 7),
     EQUALITY_CHECK("==", 7),
     UNSIGNED_RIGHT_SHIFT(">>>", 5),
-    MEMBER_ACCESS(".", 7);
+    MEMBER_ACCESS(".", 7),
+    INCREMENT("++", 2),
+    DECREMENT("--", 2);
 
     private int    precedence;
     private String string;

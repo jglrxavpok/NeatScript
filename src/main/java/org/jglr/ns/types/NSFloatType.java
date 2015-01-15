@@ -33,16 +33,16 @@ public class NSFloatType extends NSType
                 return new NSObject(this, (float) ((float) a.value() / (float) b.castedValue(this)));
 
             case GREATER_THAN:
-                return new NSObject(NSTypes.BOOL_TYPE, (float) a.value() > (float) b.castedValue(this));
+                return (float) a.value() > (float) b.castedValue(this) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             case LESS_THAN:
-                return new NSObject(NSTypes.BOOL_TYPE, (float) a.value() < (float) b.castedValue(this));
+                return (float) a.value() < (float) b.castedValue(this) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             case GEQUAL:
-                return new NSObject(NSTypes.BOOL_TYPE, (float) a.value() >= (float) b.castedValue(this));
+                return (float) a.value() >= (float) b.castedValue(this) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             case LEQUAL:
-                return new NSObject(NSTypes.BOOL_TYPE, (float) a.value() <= (float) b.castedValue(this));
+                return (float) a.value() <= (float) b.castedValue(this) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
             default:
                 break;

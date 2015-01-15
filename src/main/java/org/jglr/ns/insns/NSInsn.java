@@ -3,6 +3,7 @@ package org.jglr.ns.insns;
 import java.io.*;
 
 import org.jglr.ns.*;
+import org.jglr.ns.vm.*;
 
 public abstract class NSInsn implements NSOps
 {
@@ -25,5 +26,5 @@ public abstract class NSInsn implements NSOps
 
     public abstract NSInsn write(DataOutput out) throws IOException;
 
-    public abstract NSInsn read(DataInput in) throws IOException;
+    public abstract NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException;
 }

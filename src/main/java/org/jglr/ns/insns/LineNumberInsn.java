@@ -2,6 +2,8 @@ package org.jglr.ns.insns;
 
 import java.io.*;
 
+import org.jglr.ns.vm.*;
+
 public class LineNumberInsn extends NSInsn
 {
 
@@ -31,7 +33,7 @@ public class LineNumberInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(DataInput in) throws IOException
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
     {
         lineNumber = in.readInt();
         return this;

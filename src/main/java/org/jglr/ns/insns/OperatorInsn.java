@@ -3,6 +3,7 @@ package org.jglr.ns.insns;
 import java.io.*;
 
 import org.jglr.ns.*;
+import org.jglr.ns.vm.*;
 
 public class OperatorInsn extends NSInsn
 {
@@ -33,7 +34,7 @@ public class OperatorInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(DataInput in) throws IOException
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
     {
         operator = NSOperator.fromID(in.readUTF());
         return this;

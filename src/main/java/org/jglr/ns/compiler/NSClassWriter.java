@@ -21,6 +21,7 @@ public class NSClassWriter
         out.writeInt(0xDEAFCAFE | 0xBADA55);
         out.writeUTF(clazz.name());
         out.writeUTF(clazz.sourceFile());
+        out.writeUTF(clazz.superclass());
         int nMethods = clazz.methods().size();
         out.writeInt(nMethods);
         for(int i = 0; i < nMethods; i++ )

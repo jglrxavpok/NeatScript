@@ -2,6 +2,8 @@ package org.jglr.ns.insns;
 
 import java.io.*;
 
+import org.jglr.ns.vm.*;
+
 public class NSBaseInsn extends NSInsn
 {
 
@@ -17,7 +19,7 @@ public class NSBaseInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(DataInput in) throws IOException
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
     {
         return this;
     }

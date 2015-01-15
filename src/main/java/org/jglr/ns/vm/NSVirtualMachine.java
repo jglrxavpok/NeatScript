@@ -19,13 +19,15 @@ public class NSVirtualMachine
     private NSClass                       currentClass;
     private NSAbstractMethod              currentMethod;
     private HashMap<String, NSNativeFunc> functions;
+    private static NSVirtualMachine       runningInstance;
 
     public NSVirtualMachine()
     {
+        runningInstance = this;
         this.interpreter = new NSInterpreter(this);
         stackTrace = new Stack<>();
         classes = new HashMap<>();
-        classLoader = new BaseClassLoader(new NSClassParser(this));
+        classLoader = new BaseClassLoader(this, new NSClassParser(this));
 
         functions = new HashMap<>();
         functions.put("print", new NSNativeFunc("print")
@@ -226,7 +228,7 @@ public class NSVirtualMachine
         functions.put(name, method);
     }
 
-    public NSType getType(String typeID, NSClass caller) throws NSClassNotFoundException
+    public NSType getType(String typeID) throws NSClassNotFoundException
     {
         for(NSType type : NSTypes.list())
         {
@@ -236,6 +238,11 @@ public class NSVirtualMachine
         NSType type = new NSClassType(getOrLoad(typeID));
         NSTypes.list().add(type);
         return type;
+    }
+
+    public static NSVirtualMachine instance()
+    {
+        return runningInstance;
     }
 
 }

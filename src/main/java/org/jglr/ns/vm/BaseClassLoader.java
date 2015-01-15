@@ -10,14 +10,19 @@ import org.jglr.ns.types.*;
 public class BaseClassLoader extends NSClassLoader
 {
 
-    public BaseClassLoader(NSClassParser parser)
+    private HashMap<String, NSClass> classes;
+
+    public BaseClassLoader(NSVirtualMachine vm, NSClassParser parser)
     {
-        super(parser);
+        super(vm, parser);
+        classes = new HashMap<>();
     }
 
     @Override
     public NSClass loadClass(String className) throws NSClassNotFoundException
     {
+        if(classes.containsKey(className))
+            return classes.get(className);
         if(className.equals(NSTypes.STRING_TYPE.getID()))
         {
             NSNativeClass clazz = new NSNativeClass(NSTypes.STRING_TYPE.getID());
@@ -57,7 +62,11 @@ public class BaseClassLoader extends NSClassLoader
                 }
                 baos.flush();
                 baos.close();
-                return classParser().parseClass(baos.toByteArray());
+                NSClass clazz = classParser().parseClass(baos.toByteArray());
+                classes.put(className, clazz);
+                if(!clazz.superclass().equals("Object"))
+                    vm().getOrLoad(className);
+                return clazz;
             }
             catch(IOException e)
             {

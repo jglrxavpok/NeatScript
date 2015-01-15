@@ -19,7 +19,7 @@ public class NSCompiler implements NSOps
     private int                      varId;
     private int                      currentVariable;
     private HashMap<String, Integer> varName2Id;
-    private String                   namespace;       // FIXME: USE ME PLZ
+    private String                   namespace;        // FIXME: USE ME PLZ
     private NSFuncDef                currentMethodDef;
     private boolean                  inFunctionDef;
     private NSFuncDef                rootMethod;
@@ -28,6 +28,7 @@ public class NSCompiler implements NSOps
     private HashMap<String, NSType>  varName2Type;
     private Stack<CompilerState>     states;
     private Stack<LoopStartingPoint> loopStartStack;
+    private boolean                  inComment = false;
 
     public NSCompiler()
     {
@@ -67,18 +68,26 @@ public class NSCompiler implements NSOps
             {
                 finalInstructions.add(new LineNumberInsn( ++lineNumber));
             }
-            else if(nSCodeToken.createsNewLabel())
+            else if(nSCodeToken.type == NSTokenType.KEYWORD && nSCodeToken.content.equals(NSKeywords.COMMENT_START.raw()))
             {
-                if(nSCodeToken.type != NSTokenType.INSTRUCTION_END)
-                    tokenList.add(nSCodeToken);
-                makeInstructions(tokenList, finalInstructions);
-                if(!tokenList.isEmpty())
-                {
-                    throwCompilerException("Missing semicolon.");
-                }
+                inComment = true;
+                System.out.println(">>>> COMMENT");
             }
-            else
-                tokenList.add(nSCodeToken);
+            else if(!inComment)
+            {
+                if(nSCodeToken.createsNewLabel())
+                {
+                    if(nSCodeToken.type != NSTokenType.INSTRUCTION_END)
+                        tokenList.add(nSCodeToken);
+                    makeInstructions(tokenList, finalInstructions);
+                    if(!tokenList.isEmpty())
+                    {
+                        throwCompilerException("Missing semicolon.");
+                    }
+                }
+                else
+                    tokenList.add(nSCodeToken);
+            }
         }
         if(!tokenList.isEmpty())
         {
@@ -155,7 +164,34 @@ public class NSCompiler implements NSOps
                         type = NSTokenType.STRING;
                     }
                 }
-                else if(!inString)
+                else if(!inString && (chars[index] == '\n' || chars[index] == '\r'))
+                {
+                    if(!buffer.toString().isEmpty())
+                    {
+                        for(NSKeywords keyword : NSKeywords.values())
+                        {
+                            if(keyword.raw().equals(buffer.toString()))
+                            {
+                                return new KeywordToken(keyword);
+                            }
+                        }
+                        for(NSOperator operator : NSOperator.values())
+                        {
+                            if(operator.toString().equals(buffer.toString()))
+                            {
+                                index += operator.toString().length(); // We offset the index by the length of the operator
+                                return new OperatorToken(operator);
+                            }
+                        }
+
+                        return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
+                    }
+                    index++ ;
+                    line++ ;
+                    inComment = false;
+                    return new NSCodeToken("", NSTokenType.NEW_LINE);
+                }
+                else if(!inString && !inComment)
                 {
                     if(chars[index] >= '0' && chars[index] <= '9')
                     {
@@ -302,33 +338,6 @@ public class NSCompiler implements NSOps
                         breakAfter = true;
                         type = NSTokenType.INSTRUCTION_END;
                     }
-                    else if(chars[index] == '\n' || chars[index] == '\r')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
-                                    return new KeywordToken(keyword);
-                                }
-                            }
-                            for(NSOperator operator : NSOperator.values())
-                            {
-                                if(operator.toString().equals(buffer.toString()))
-                                {
-                                    index += operator.toString().length(); // We offset the index by the length of the operator
-                                    return new OperatorToken(operator);
-                                }
-                            }
-
-                            return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
-                        }
-                        index++ ;
-                        line++ ;
-
-                        return new NSCodeToken("", NSTokenType.NEW_LINE);
-                    }
                 }
 
                 if(append)
@@ -380,15 +389,26 @@ public class NSCompiler implements NSOps
             @Override
             public int compare(NSOperator o1, NSOperator o2)
             {
-                return -Integer.compare(o1.name().length(), o2.name().length()); // We want the operators from longer to shorter
+                return Integer.compare(o2.name().length(), o1.name().length()); // We want the operators from longer to shorter
             }
         });
+        if(buffer.toString().isEmpty())
+            for(NSKeywords keyword : NSKeywords.values())
+            {
+                if(source.indexOf(keyword.raw(), index) == index)
+                {
+                    index += keyword.raw().length();
+                    return new KeywordToken(keyword);
+                }
+            }
         for(NSOperator operator : operators)
         {
             if(source.indexOf(operator.toString(), index) == index)
             {
-                foundOperator = operator;
-                break;
+                if(foundOperator == null)
+                    foundOperator = operator;
+                else if(foundOperator.toString().length() < operator.toString().length())
+                    foundOperator = operator;
             }
         }
         if(foundOperator == null)
@@ -685,6 +705,20 @@ public class NSCompiler implements NSOps
                         typeStack.pop();
                     }
                     currentVariable = -1;
+                }
+                else if(operator == NSOperator.INCREMENT || operator == NSOperator.DECREMENT)
+                {
+                    if(currentVariable == -1)
+                    {
+                        throwCompilerException("Invalid argument for operator ++/--");
+                    }
+                    else
+                    {
+                        insnList.add(new NSLoadIntInsn(1));
+                        insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
+                        insnList.add(new NSVarInsn(VAR_STORE, currentVariable));
+                        insnList.add(new NSVarInsn(VAR_LOAD, currentVariable));
+                    }
                 }
                 else
                 {

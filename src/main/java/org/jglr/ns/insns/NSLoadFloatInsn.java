@@ -2,6 +2,8 @@ package org.jglr.ns.insns;
 
 import java.io.*;
 
+import org.jglr.ns.vm.*;
+
 public class NSLoadFloatInsn extends NSInsn
 {
 
@@ -18,6 +20,11 @@ public class NSLoadFloatInsn extends NSInsn
         return value;
     }
 
+    public String toString()
+    {
+        return super.toString() + " " + value;
+    }
+
     @Override
     public NSInsn write(DataOutput out) throws IOException
     {
@@ -26,7 +33,7 @@ public class NSLoadFloatInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(DataInput in) throws IOException
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
     {
         value = Float.intBitsToFloat(in.readInt());
         return this;

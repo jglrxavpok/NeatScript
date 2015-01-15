@@ -27,8 +27,9 @@ public class NSClassParser
         {
             String name = in.readUTF();
             String sourceFile = in.readUTF();
+            String superclass = in.readUTF();
             int nMethods = in.readInt();
-            NSClass clazz = new NSClass(name).sourceFile(sourceFile);
+            NSClass clazz = new NSClass(name).sourceFile(sourceFile).superclass(superclass);
             List<NSAbstractMethod> methods = new ArrayList<>();
             for(int i = 0; i < nMethods; i++ )
                 readMethod(in, methods, clazz);
@@ -51,7 +52,7 @@ public class NSClassParser
         for(int i = 0; i < params; i++ )
         {
             String paramName = in.readUTF();
-            NSType type = vm.getType(in.readUTF(), clazz);
+            NSType type = vm.getType(in.readUTF());
             def.paramNames().add(paramName);
             def.types().add(type);
         }
@@ -63,83 +64,83 @@ public class NSClassParser
             switch(opcode)
             {
                 case NSOps.LOAD_CONSTANT:
-                    insns.add(new LoadConstantInsn(null).read(in));
+                    insns.add(new LoadConstantInsn(null).read(vm, in));
                     break;
 
                 case NSOps.OPERATOR:
-                    insns.add(new OperatorInsn(null).read(in));
+                    insns.add(new OperatorInsn(null).read(vm, in));
                     break;
 
                 case NSOps.LINE_NUMBER:
-                    insns.add(new LineNumberInsn(0).read(in));
+                    insns.add(new LineNumberInsn(0).read(vm, in));
                     break;
 
                 case NSOps.FUNCTION_CALL:
-                    insns.add(new FunctionCallInsn("").read(in));
+                    insns.add(new FunctionCallInsn("").read(vm, in));
                     break;
 
                 case NSOps.LABEL:
-                    insns.add(new LabelInsn(null).read(in));
+                    insns.add(new LabelInsn(null).read(vm, in));
                     break;
 
                 case NSOps.GOTO:
-                    insns.add(new JumpInsn(null).read(in));
+                    insns.add(new JumpInsn(null).read(vm, in));
                     break;
 
                 case NSOps.IF_GOTO:
-                    insns.add(new LabelInsn(opcode, null).read(in));
+                    insns.add(new LabelInsn(opcode, null).read(vm, in));
                     break;
 
                 case NSOps.IF_NOT_GOTO:
-                    insns.add(new LabelInsn(opcode, null).read(in));
+                    insns.add(new LabelInsn(opcode, null).read(vm, in));
                     break;
 
                 case NSOps.STACK_PUSH:
-                    insns.add(new StackInsn(opcode).read(in));
+                    insns.add(new StackInsn(opcode).read(vm, in));
                     break;
 
                 case NSOps.STACK_PEEK:
-                    insns.add(new StackInsn(opcode).read(in));
+                    insns.add(new StackInsn(opcode).read(vm, in));
                     break;
 
                 case NSOps.STACK_POP:
-                    insns.add(new StackInsn(opcode).read(in));
+                    insns.add(new StackInsn(opcode).read(vm, in));
                     break;
 
                 case NSOps.NEW_VAR:
-                    insns.add(new NewVarInsn(null, null, 0).read(in));
+                    insns.add(new NewVarInsn(null, null, 0).read(vm, in));
                     break;
 
                 case NSOps.VAR_LOAD:
-                    insns.add(new NSVarInsn(opcode, 0).read(in));
+                    insns.add(new NSVarInsn(opcode, 0).read(vm, in));
                     break;
 
                 case NSOps.VAR_STORE:
-                    insns.add(new NSVarInsn(opcode, 0).read(in));
+                    insns.add(new NSVarInsn(opcode, 0).read(vm, in));
                     break;
 
                 case NSOps.GET_FIELD:
-                    insns.add(new LoadFieldInsn(opcode, "").read(in));
+                    insns.add(new LoadFieldInsn(opcode, "").read(vm, in));
                     break;
 
                 case NSOps.POP:
-                    insns.add(new NSBaseInsn(opcode).read(in));
+                    insns.add(new NSBaseInsn(opcode).read(vm, in));
                     break;
 
                 case NSOps.RETURN:
-                    insns.add(new NSBaseInsn(opcode).read(in));
+                    insns.add(new NSBaseInsn(opcode).read(vm, in));
                     break;
 
                 case NSOps.RETURN_VALUE:
-                    insns.add(new NSBaseInsn(opcode).read(in));
+                    insns.add(new NSBaseInsn(opcode).read(vm, in));
                     break;
 
                 case NSOps.ILOAD:
-                    insns.add(new NSLoadIntInsn(0).read(in));
+                    insns.add(new NSLoadIntInsn(0).read(vm, in));
                     break;
 
                 case NSOps.FLOAD:
-                    insns.add(new NSLoadFloatInsn(0).read(in));
+                    insns.add(new NSLoadFloatInsn(0).read(vm, in));
                     break;
             }
         }

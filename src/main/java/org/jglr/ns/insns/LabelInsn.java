@@ -2,6 +2,8 @@ package org.jglr.ns.insns;
 
 import java.io.*;
 
+import org.jglr.ns.vm.*;
+
 public class LabelInsn extends NSInsn
 {
     private Label label;
@@ -35,7 +37,7 @@ public class LabelInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(DataInput in) throws IOException
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
     {
         label = new Label(in.readUTF());
         return this;

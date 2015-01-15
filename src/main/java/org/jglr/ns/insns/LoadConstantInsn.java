@@ -2,6 +2,8 @@ package org.jglr.ns.insns;
 
 import java.io.*;
 
+import org.jglr.ns.vm.*;
+
 public class LoadConstantInsn extends NSInsn
 {
 
@@ -41,7 +43,7 @@ public class LoadConstantInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(DataInput in) throws IOException
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
     {
         String type = in.readUTF();
         String value = in.readUTF();

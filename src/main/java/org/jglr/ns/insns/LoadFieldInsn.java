@@ -2,6 +2,8 @@ package org.jglr.ns.insns;
 
 import java.io.*;
 
+import org.jglr.ns.vm.*;
+
 public class LoadFieldInsn extends NSInsn
 {
 
@@ -36,7 +38,7 @@ public class LoadFieldInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(DataInput in) throws IOException
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
     {
         fieldName = in.readUTF();
         return this;
