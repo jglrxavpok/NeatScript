@@ -63,7 +63,12 @@ public class NSStringType extends NSType
 
     public NSType init(NSObject object)
     {
-        object.field("size", new NSObject(this, false).value(((String) object.value()).length()));
+        if(object.value() == null)
+        {
+            object.field("size", new NSObject(NSTypes.INT_TYPE, 0));
+            return this;
+        }
+        object.field("size", new NSObject(NSTypes.INT_TYPE, ((String) object.value()).length()));
         return this;
     }
 

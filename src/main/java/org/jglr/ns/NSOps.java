@@ -107,6 +107,11 @@ public interface NSOps
      */
     public static final int               FLOAD            = 0x13;
 
+    /**
+     * Stores a value on the given field
+     */
+    public static final int               STORE_FIELD      = 0x14;
+
     @Deprecated
     public static final int               GET_STATIC_FIELD = -1;
 

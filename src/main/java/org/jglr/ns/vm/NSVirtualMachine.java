@@ -19,6 +19,7 @@ public class NSVirtualMachine
     private NSClass                       currentClass;
     private NSAbstractMethod              currentMethod;
     private HashMap<String, NSNativeFunc> functions;
+    private HashMap<NSClass, NSVariable>  selfInstances;
     private static NSVirtualMachine       runningInstance;
 
     public NSVirtualMachine()
@@ -27,6 +28,7 @@ public class NSVirtualMachine
         this.interpreter = new NSInterpreter(this);
         stackTrace = new Stack<>();
         classes = new HashMap<>();
+        selfInstances = new HashMap<>();
         classLoader = new BaseClassLoader(this, new NSClassParser(this));
 
         functions = new HashMap<>();
@@ -93,7 +95,8 @@ public class NSVirtualMachine
                     NSObject object = valueStack.pop();
                     vars[i] = new NSVariable(object.type(), func.paramNames().get(i), i).value(object);
                 }
-                NSObject object = interpreter.interpret(((NSFuncDef) func).instructions(), vars);
+                //                vars[0] = getSelfInstance(currentClass);
+                NSObject object = interpreter.interpret(currentClass, ((NSFuncDef) func).instructions(), vars);
                 if(object != null)
                 {
                     valueStack.push(object);
@@ -112,6 +115,19 @@ public class NSVirtualMachine
         }
         currentClass = oldClass;
         popTrace();
+    }
+
+    private NSVariable getSelfInstance(NSClass clazz) throws NSClassNotFoundException
+    {
+        if(selfInstances.containsKey(clazz))
+        {
+            return selfInstances.get(clazz);
+        }
+        NSType type = getType(clazz.name());
+        NSVariable self = new NSVariable(type, "this", 0);
+        self.value(new NSObject(type));
+        selfInstances.put(clazz, self);
+        return self;
     }
 
     private void throwVMException(Exception e) throws NSVirtualMachineException

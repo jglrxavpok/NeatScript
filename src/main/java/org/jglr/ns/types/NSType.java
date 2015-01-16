@@ -80,7 +80,7 @@ public abstract class NSType
         }
         if(supertype != null)
             return supertype.operation(a, b, operator);
-        return null;
+        throw new UnsupportedOperationException(a.type().getID() + " " + operator.toString() + " " + a.type().getID());
     }
 
     public NSType init(NSObject object)

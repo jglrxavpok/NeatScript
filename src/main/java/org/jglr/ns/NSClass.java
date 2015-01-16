@@ -13,12 +13,39 @@ public class NSClass
     private NSAbstractMethod       rootMethod;
     private String                 sourceFile;
     private String                 superclass;
+    private List<NSField>          fields;
 
     public NSClass(String name)
     {
         this.name = name;
         methodsDef = new ArrayList<NSAbstractMethod>();
+        fields = new ArrayList<>();
         superclass("Object");
+    }
+
+    public List<NSField> fields()
+    {
+        return fields;
+    }
+
+    public boolean hasField(String name)
+    {
+        for(NSField field : fields)
+        {
+            if(field.name().equals(name))
+                return true;
+        }
+        return false;
+    }
+
+    public NSField field(String name) throws NSNoSuchFieldException
+    {
+        for(NSField field : fields)
+        {
+            if(field.name().equals(name))
+                return field;
+        }
+        throw new NSNoSuchFieldException(this, name);
     }
 
     public String superclass()

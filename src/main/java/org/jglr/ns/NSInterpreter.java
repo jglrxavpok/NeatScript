@@ -19,16 +19,29 @@ public class NSInterpreter implements NSOps, NSTypes
         NSOps.initAllNames();
     }
 
-    public NSObject interpret(List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
+    public NSObject interpret(NSClass clazz, List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
     {
         int index = 0;
         Stack<NSObject> heapStack = new Stack<>();
         HashMap<Integer, NSVariable> variables = new HashMap<>();
         Stack<NSObject> valuesStack = new Stack<>();
+        NSObject self = null;
         for(int i = 0; i < startVariables.length; i++ )
         {
+            //            if(i == 0)
+            //            {
+            //                self = startVariables[i].value();
+            //                System.out.println("<< Self is " + self + " and type is " + self.type().getID());
+            //                for(String fieldName : self.fieldNames())
+            //                {
+            //                    System.out.println("<< Field: " + fieldName + " = " + self.field(fieldName));
+            //                }
+            //            }
+            //            else
+            //                variables.put(i - 1, startVariables[i]);
             variables.put(i, startVariables[i]);
         }
+
         lineNumber = 0;
         //        for(NSInsn insn : insns)
         //        {
@@ -119,14 +132,22 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == VAR_LOAD)
             {
                 NSVarInsn varInsn = (NSVarInsn) insn;
-                NSVariable var = variables.get(varInsn.varIndex());
-                if(var == null)
+                int vindex = varInsn.varIndex();
+                //                if(vindex == 0) // this
+                //                {
+                //                    valuesStack.push(self);
+                //                }
+                //                else
                 {
-                    throwRuntimeException("Tried to load invalid variable index: " + varInsn.varIndex(), lineNumber, index, insn);
-                }
-                else
-                {
-                    valuesStack.push(var.value());
+                    NSVariable var = variables.get(vindex);
+                    if(var == null)
+                    {
+                        throwRuntimeException("Tried to load invalid variable index: " + varInsn.varIndex(), lineNumber, index, insn);
+                    }
+                    else
+                    {
+                        valuesStack.push(var.value());
+                    }
                 }
             }
             else if(insn.getOpcode() == VAR_STORE)
@@ -154,13 +175,24 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == GET_FIELD)
             {
                 NSObject var = valuesStack.pop();
-                NSObject field = var.field(((LoadFieldInsn) insn).fieldName());
+                NSObject field = var.field(((NSFieldInsn) insn).fieldName());
                 if(field == null)
                 {
-                    throwRuntimeException("Unknown field: " + ((LoadFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
+                    throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
                 }
                 else
                     valuesStack.push(field);
+            }
+            else if(insn.getOpcode() == STORE_FIELD)
+            {
+                NSObject var = valuesStack.pop();
+                NSObject field = var.field(((NSFieldInsn) insn).fieldName());
+                if(field == null)
+                {
+                    throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
+                }
+                else
+                    field.value(valuesStack.pop().castedValue(field.type()));
             }
             else if(insn.getOpcode() == FUNCTION_CALL)
             {

@@ -1,24 +1,25 @@
 package org.jglr.ns.compiler;
 
-import java.util.*;
-
+import org.jglr.ns.*;
 import org.jglr.ns.types.*;
 
 public class CompilerState
 {
 
-    private int                      labelID;
-    private String                   labelBase;
-    private int                      varId;
-    private HashMap<String, NSType>  varName2Type;
-    private HashMap<String, Integer> varName2Id;
-    private NSFuncDef                currentMethodDef;
+    private int                                 labelID;
+    private String                              labelBase;
+    private int                                 varId;
+    private HashMapWithDefault<String, NSType>  varName2Type;
+    private HashMapWithDefault<String, Integer> varName2Id;
+    private NSFuncDef                           currentMethodDef;
+    private HashMapWithDefault<Integer, String> varId2Name;
 
     @SuppressWarnings("unchecked")
-    public CompilerState(HashMap<String, Integer> varName2Id, HashMap<String, NSType> varName2Type, int varId, String labelBase, int labelID, NSFuncDef currentMethodDef)
+    public CompilerState(HashMapWithDefault<String, Integer> varName2Id, HashMapWithDefault<Integer, String> varId2Name, HashMapWithDefault<String, NSType> varName2Type, int varId, String labelBase, int labelID, NSFuncDef currentMethodDef)
     {
-        this.varName2Id = (HashMap<String, Integer>) varName2Id.clone();
-        this.varName2Type = (HashMap<String, NSType>) varName2Type.clone();
+        this.varName2Id = (HashMapWithDefault<String, Integer>) varName2Id.clone();
+        this.varName2Type = (HashMapWithDefault<String, NSType>) varName2Type.clone();
+        this.varId2Name = (HashMapWithDefault<Integer, String>) varId2Name.clone();
         this.varId = varId;
         this.labelBase = labelBase;
         this.labelID = labelID;
@@ -30,12 +31,17 @@ public class CompilerState
         return currentMethodDef;
     }
 
-    public HashMap<String, Integer> varNamesToIds()
+    public HashMapWithDefault<String, Integer> varNamesToIds()
     {
         return varName2Id;
     }
 
-    public HashMap<String, NSType> varNamesToTypes()
+    public HashMapWithDefault<Integer, String> varIdsToNames()
+    {
+        return varId2Name;
+    }
+
+    public HashMapWithDefault<String, NSType> varNamesToTypes()
     {
         return varName2Type;
     }

@@ -35,6 +35,11 @@ public class NSObject
             type.init(this);
     }
 
+    public Collection<String> fieldNames()
+    {
+        return fields.keySet();
+    }
+
     public NSType type()
     {
         return type;
@@ -65,6 +70,7 @@ public class NSObject
     public NSObject field(String fieldName)
     {
         NSObject object = fields.get(fieldName);
+        System.out.println("Field ==> " + fieldName + " is " + type() + (object == null ? " and doesn't exist" : " and exist"));
         return object;
     }
 
