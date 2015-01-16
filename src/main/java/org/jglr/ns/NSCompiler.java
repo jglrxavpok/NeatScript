@@ -32,6 +32,7 @@ public class NSCompiler implements NSOps
     private Stack<LoopStartingPoint>            loopStartStack;
     private boolean                             inComment = false;
     private NSClassType                         selfType;
+    private boolean                             inFieldDef;
 
     public NSCompiler()
     {
@@ -61,6 +62,7 @@ public class NSCompiler implements NSOps
         this.source = source.content();
         this.index = 0;
         this.line = 0;
+        varId = 1;
         try
         {
             selfType = new NSClassType(clazz, true);
@@ -578,20 +580,31 @@ public class NSCompiler implements NSOps
             else if(token.type == NSTokenType.WORD && !inFunctionDef)
             {
                 int vindex = -1;
-                if(varName2Id.containsKey(token.content))
+                if(clazz.hasField(token.content))
                 {
-                    vindex = varName2Id.get(token.content);
-                }
-                if(vindex >= 0)
-                {
-                    insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                    insnList.add(new NSVarInsn(VAR_LOAD, 0));
+                    insnList.add(new NSFieldInsn(token.content));
                     List<NSType> types = new ArrayList<>();
                     types.add(NSTypes.STRING_TYPE);
                     insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
                 }
                 else
                 {
-                    throwCompilerException("Unexpected symbol: " + token.content);
+                    if(varName2Id.containsKey(token.content))
+                    {
+                        vindex = varName2Id.get(token.content);
+                    }
+                    if(vindex >= 0)
+                    {
+                        insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                        List<NSType> types = new ArrayList<>();
+                        types.add(NSTypes.STRING_TYPE);
+                        insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
+                    }
+                    else
+                    {
+                        throwCompilerException("Unexpected symbol: " + token.content);
+                    }
                 }
             }
             else
@@ -609,6 +622,7 @@ public class NSCompiler implements NSOps
                 handleToken(nSCodeToken, index++ , rpnList, insnList);
             }
         }
+        insnList.forEach(System.out::println);
     }
 
     private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
@@ -661,16 +675,17 @@ public class NSCompiler implements NSOps
                         else
                         {
                             vindex = nextVarIndex();
-                            /* if(currentMethodDef == rootMethod)
-                             {
-                                 NSField field = new NSField(pendingType, token.content);
-                                 field.value(new NSObject(pendingType));
-                                 clazz.fields().add(field);
-                             }
-                             else*/
+                            if(currentMethodDef == rootMethod && inFieldDef)
+                            {
+                                NSField field = new NSField(pendingType, token.content);
+                                field.value(new NSObject(pendingType));
+                                clazz.fields().add(field);
+                            }
+                            else
                             {
                                 insnList.add(new NewVarInsn(pendingType, token.content, vindex));
                             }
+                            inFieldDef = false;
                             justCreated = true;
                             varName2Type.put(token.content, pendingType);
                             varName2Id.put(token.content, vindex);
@@ -695,6 +710,7 @@ public class NSCompiler implements NSOps
                             {
                                 loadSelfIfNecessary(insnList);
                                 insnList.add(new NSFieldInsn(token.content));
+                                typeStack.pop();
                                 try
                                 {
                                     typeStack.push(clazz.field(token.content).type());
@@ -708,8 +724,8 @@ public class NSCompiler implements NSOps
                         else
                         {
                             insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                            typeStack.push(varName2Type.get(token.content));
                         }
-                        typeStack.push(varName2Type.get(token.content));
                     }
                 }
             }
@@ -735,19 +751,8 @@ public class NSCompiler implements NSOps
                     }
                     else if(previous.getOpcode() == VAR_LOAD)
                     {
-                        typeStack.pop();
                         insnList.set(insnList.size() - 1, new NSFieldInsn(tokenList.get(tokenIndex - 1).content));
-                        //                        loadSelfIfNecessary(insnList.size() - 2, insnList);
-                        //
-                        //                        try
-                        //                        {
-                        //                            typeStack.pop();
-                        //                            typeStack.push(clazz.field(tokenList.get(tokenIndex - 1).content).type());
-                        //                        }
-                        //                        catch(NSNoSuchFieldException e)
-                        //                        {
-                        //                            e.printStackTrace();
-                        //                        }
+                        typeStack.pop();
                     }
                 }
                 else if(operator == NSOperator.ASSIGNEMENT)
@@ -762,9 +767,11 @@ public class NSCompiler implements NSOps
                         {
                             loadSelfIfNecessary(insnList);
                             insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable));
+                            typeStack.pop();
                         }
                         else
                             insnList.add(new NSVarInsn(VAR_STORE, varName2Id.get(currentVariable)));
+                        typeStack.pop();
                     }
                     currentVariable = null;
                 }
@@ -781,9 +788,9 @@ public class NSCompiler implements NSOps
 
                         if(clazz.hasField(currentVariable))
                         {
-                            loadSelfIfNecessary(insnList);
+                            // insnList.add(new NSVarInsn(VAR_LOAD, 0)); TODO: load 'this'/'self'
                             insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable));
-                            loadSelfIfNecessary(insnList);
+                            // insnList.add(new NSVarInsn(VAR_LOAD, 0)); TODO: load 'this'/'self'
                             insnList.add(new NSFieldInsn(currentVariable));
                         }
                         else
@@ -797,6 +804,7 @@ public class NSCompiler implements NSOps
                 {
                     NSType lastType = typeStack.pop();
                     NSType type = typeStack.pop(); // We get the type right before the last type loaded
+                    System.out.println(type.getID() + " " + operator.toString() + " " + lastType.getID());
                     NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
                     typeStack.push(result.type());
                     insnList.add(new OperatorInsn(operator));
@@ -917,7 +925,7 @@ public class NSCompiler implements NSOps
                         {
                             //                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
                             inFunctionDef = false;
-                            varId = 0;
+                            varId = 1;
                             varName2Id.clear(); // TODO: Might need to push it before clearing it to save root method variables
                             for(int i = 0; i < currentMethodDef.paramNames().size(); i++ )
                             {
@@ -949,6 +957,18 @@ public class NSCompiler implements NSOps
                         else
                             insnList.add(new NSBaseInsn(RETURN));
                     }
+                        break;
+
+                    case FIELD:
+                        inFieldDef = true;
+                        insnList.remove(insnList.size() - 1);
+                        typeStack.pop();
+                        NewVarInsn newVar = (NewVarInsn) insnList.remove(insnList.size() - 1);
+                        NSField field = new NSField(newVar.type(), newVar.name());
+                        varId = newVar.varIndex();
+                        field.value(new NSObject(newVar.type()));
+                        clazz.fields().add(field);
+                        System.out.println("FOUND FIELD");
                         break;
 
                     default:
@@ -1059,7 +1079,7 @@ public class NSCompiler implements NSOps
         varName2Id.clear();
         varId2Name.clear();
         varName2Type.clear();
-        varId = 0;
+        varId = 1;
         labelBase = "L";
         labelID = 0;
     }

@@ -89,13 +89,13 @@ public class NSVirtualMachine
         {
             if(func instanceof NSFuncDef)
             {
-                NSVariable[] vars = new NSVariable[def.paramNames().size()];
-                for(int i = vars.length - 1; i >= 0; i-- )
+                NSVariable[] vars = new NSVariable[def.paramNames().size() + 1];
+                for(int i = vars.length - 1; i >= 1; i-- )
                 {
                     NSObject object = valueStack.pop();
-                    vars[i] = new NSVariable(object.type(), func.paramNames().get(i), i).value(object);
+                    vars[i] = new NSVariable(object.type(), func.paramNames().get(i - 1), i).value(object);
                 }
-                //                vars[0] = getSelfInstance(currentClass);
+                vars[0] = getSelfInstance(currentClass);
                 NSObject object = interpreter.interpret(currentClass, ((NSFuncDef) func).instructions(), vars);
                 if(object != null)
                 {

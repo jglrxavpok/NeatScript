@@ -9,7 +9,7 @@ public enum NSKeywords
     FUNCTION_DEF("function", true),
     CODE_BLOCK_START("{", true), CODE_BLOCK_END("}", true),
     RETURN("return"), WHILE("while"),
-    COMMENT_START("//");
+    COMMENT_START("//"), FIELD("field");
 
     private String  keyword;
     private int     precedence;

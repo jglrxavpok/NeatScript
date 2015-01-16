@@ -28,17 +28,17 @@ public class NSInterpreter implements NSOps, NSTypes
         NSObject self = null;
         for(int i = 0; i < startVariables.length; i++ )
         {
-            //            if(i == 0)
-            //            {
-            //                self = startVariables[i].value();
-            //                System.out.println("<< Self is " + self + " and type is " + self.type().getID());
-            //                for(String fieldName : self.fieldNames())
-            //                {
-            //                    System.out.println("<< Field: " + fieldName + " = " + self.field(fieldName));
-            //                }
-            //            }
-            //            else
-            //                variables.put(i - 1, startVariables[i]);
+            if(i == 0)
+            {
+                self = startVariables[i].value();
+                System.out.println("<< Self is " + self + " and type is " + self.type().getID());
+                for(String fieldName : self.fieldNames())
+                {
+                    System.out.println("<< Field: " + fieldName + " = " + self.field(fieldName).type());
+                }
+            }
+            else
+                variables.put(i - 1, startVariables[i]);
             variables.put(i, startVariables[i]);
         }
 
@@ -133,11 +133,11 @@ public class NSInterpreter implements NSOps, NSTypes
             {
                 NSVarInsn varInsn = (NSVarInsn) insn;
                 int vindex = varInsn.varIndex();
-                //                if(vindex == 0) // this
-                //                {
-                //                    valuesStack.push(self);
-                //                }
-                //                else
+                if(vindex == 0) // this
+                {
+                    valuesStack.push(self);
+                }
+                else
                 {
                     NSVariable var = variables.get(vindex);
                     if(var == null)
