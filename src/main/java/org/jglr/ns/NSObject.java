@@ -48,6 +48,7 @@ public class NSObject
     public NSObject value(Object object)
     {
         this.object = object;
+        type.init(this);
         return this;
     }
 
@@ -70,7 +71,6 @@ public class NSObject
     public NSObject field(String fieldName)
     {
         NSObject object = fields.get(fieldName);
-        System.out.println("Field ==> " + fieldName + " is " + type() + (object == null ? " and doesn't exist" : " and exist"));
         return object;
     }
 

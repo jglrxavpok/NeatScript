@@ -31,11 +31,7 @@ public class NSInterpreter implements NSOps, NSTypes
             if(i == 0)
             {
                 self = startVariables[i].value();
-                System.out.println("<< Self is " + self + " and type is " + self.type().getID());
-                for(String fieldName : self.fieldNames())
-                {
-                    System.out.println("<< Field: " + fieldName + " = " + self.field(fieldName).type());
-                }
+                System.out.println("<< Self is " + self + " and type is " + self.type().getID()); // TODO: remove debug
             }
             else
                 variables.put(i - 1, startVariables[i]);

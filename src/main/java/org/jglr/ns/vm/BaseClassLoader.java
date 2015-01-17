@@ -36,7 +36,7 @@ public class BaseClassLoader extends NSClassLoader
                     if(object.type().isCastable(NSTypes.STRING_TYPE))
                     {
                         String str = (String) object.type().cast(object.value(), NSTypes.STRING_TYPE);
-                        vars.push(new NSObject(NSTypes.STRING_TYPE, str.length() + "")); // TODO: Replace String type by Int type
+                        vars.push(new NSObject(NSTypes.INT_TYPE, str.length()));
                     }
                     else
                         throw new RuntimeException(object.type().getID() + " cannot be casted to a String");

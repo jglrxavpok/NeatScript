@@ -39,7 +39,7 @@ public class NSVirtualMachine
             public void run(Stack<NSObject> vars)
             {
                 NSObject var = vars.pop();
-                System.out.println(var.value() + " | " + var.type());
+                System.out.println(var.value() + " | " + var.type().getID());
             }
         });
     }

@@ -4,7 +4,7 @@ String txt = "Some text";
 field String txt1 = "dzqdqz";
 print("Size of txt1 is "+txt1.length()+" via length()");
 print("Size of txt1 is "+txt1.size+" via size");
-Int nbr = 10+2;
+Int nbr = txt1.length();
 print(nbr);
 txt = "a";
 txt1;

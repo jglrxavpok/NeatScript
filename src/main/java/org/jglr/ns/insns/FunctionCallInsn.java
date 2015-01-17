@@ -46,7 +46,18 @@ public class FunctionCallInsn extends NSInsn
 
     public String toString()
     {
-        return super.toString() + " " + owner + "::" + name;
+        String typesStr = "";
+        int index = 0;
+        for(NSType type : types)
+        {
+            if(index != 0)
+                typesStr += ",";
+            typesStr += type.getID();
+            index++ ;
+        }
+        if(typesStr.isEmpty())
+            typesStr = "/";
+        return super.toString() + " " + owner + "::" + name + " " + typesStr;
     }
 
     public FunctionCallInsn types(List<NSType> types)
