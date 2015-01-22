@@ -31,7 +31,6 @@ public class NSInterpreter implements NSOps, NSTypes
             if(i == 0)
             {
                 self = startVariables[i].value();
-                System.out.println("<< Self is " + self + " and type is " + self.type().getID()); // TODO: remove debug
             }
             else
                 variables.put(i - 1, startVariables[i]);
@@ -85,7 +84,7 @@ public class NSInterpreter implements NSOps, NSTypes
             {
                 LabelInsn jumpInsn = (LabelInsn) insn;
                 index = gotoLabel(insns, index, jumpInsn.label()) - 1;
-                System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
+                // TODO: Debug, uncomment if necessary                System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
             }
             else if(insn.getOpcode() == IF_NOT_GOTO || insn.getOpcode() == IF_GOTO)
             {
@@ -95,7 +94,7 @@ public class NSInterpreter implements NSOps, NSTypes
                 if(result == (insn.getOpcode() == IF_GOTO ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE))
                 {
                     index = gotoLabel(insns, index, jumpInsn.label()) - 1;
-                    System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
+                    // TODO: Debug, uncomment if necessary            System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
                 }
             }
             else if(insn.getOpcode() == STACK_PUSH)
@@ -181,6 +180,7 @@ public class NSInterpreter implements NSOps, NSTypes
             }
             else if(insn.getOpcode() == STORE_FIELD)
             {
+                System.out.println("HELLO");
                 NSObject var = valuesStack.pop();
                 NSObject field = var.field(((NSFieldInsn) insn).fieldName());
                 if(field == null)
@@ -188,7 +188,10 @@ public class NSInterpreter implements NSOps, NSTypes
                     throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
                 }
                 else
-                    field.value(valuesStack.pop().castedValue(field.type()));
+                {
+                    field.value(valuesStack.pop().value());
+                    System.out.println("Saved to field: " + ((NSFieldInsn) insn).fieldName() + " => " + field.value());
+                }
             }
             else if(insn.getOpcode() == FUNCTION_CALL)
             {
@@ -215,6 +218,16 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == RETURN_VALUE)
             {
                 return valuesStack.pop();
+            }
+            else if(insn.getOpcode() == NEW)
+            {
+                NSNewInsn newInsn = (NSNewInsn) insn;
+                NSClass ownerClass = vm.getOrLoad(newInsn.functionOwner());
+                NSObject object = vm.getNewInstance(ownerClass, newInsn.types(), valuesStack);
+                //                NSAbstractMethod method = ownerClass.method(newInsn.functionName(), newInsn.types());
+                //                method.owner(newInsn.functionOwner());
+                //                vm.methodCall(method, valuesStack);
+                valuesStack.push(object);
             }
         }
         return null;

@@ -50,7 +50,8 @@ public class BaseClassLoader extends NSClassLoader
         }
         else
         {
-            InputStream input = BaseClassLoader.class.getResourceAsStream(className + ".nsc");
+            System.out.println("Loading " + className);
+            InputStream input = BaseClassLoader.class.getResourceAsStream("/" + className + ".nsc");
             byte[] buffer = new byte[65565];
             int n;
             ByteArrayOutputStream baos = new ByteArrayOutputStream();

@@ -20,7 +20,7 @@ public class NSStringType extends NSType
                 NSObject object = vars.pop();
                 String str = (String) object.value();
                 int length = str.length();
-                vars.push(new NSObject(NSTypes.STRING_TYPE, "" + length));
+                vars.push(new NSObject(NSTypes.INT_TYPE, length));
             }
         });
     }

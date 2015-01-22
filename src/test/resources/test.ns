@@ -2,9 +2,9 @@
 print("How are you going?" + " I'm a test program!" - " test");
 String txt = "Some text";
 field String txt1 = "dzqdqz";
-print("Size of txt1 is "+txt1.length()+" via length()");
-print("Size of txt1 is "+txt1.size+" via size");
-Int nbr = txt1.length();
+print("Size of txt1 is "+this.txt1.length()+" via length()");
+print("Size of txt1 is "+self.txt1.size+" via size");
+Int nbr = 0;// Does not work :( txt1.length();
 print(nbr);
 txt = "a";
 txt1;
@@ -28,7 +28,7 @@ end
 "End of program!";
 print(prettify("TEST PRETTIFY"));
 print(prettify("Second prettify"));
-print(prettify("lol"));
+print(prettify("lol"+0));
 
 function prettify(String txt) 
 {
@@ -39,3 +39,6 @@ function prettify(String txt)
 
 Object testObject = "TestObjectText";
 print(testObject);
+
+SecondTest object1 = new SecondTest(10);
+print(object1.testNbr);

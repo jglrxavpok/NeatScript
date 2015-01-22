@@ -11,7 +11,6 @@ import org.jglr.ns.types.*;
 public class NSVirtualMachine
 {
 
-    private NSClass                       entry;
     private NSInterpreter                 interpreter;
     private Stack<StackTraceElement>      stackTrace;
     private HashMap<String, NSClass>      classes;
@@ -20,6 +19,7 @@ public class NSVirtualMachine
     private NSAbstractMethod              currentMethod;
     private HashMap<String, NSNativeFunc> functions;
     private HashMap<NSClass, NSVariable>  selfInstances;
+    private NSClass                       entry;
     private static NSVirtualMachine       runningInstance;
 
     public NSVirtualMachine()
@@ -44,26 +44,6 @@ public class NSVirtualMachine
         });
     }
 
-    public void entryPoint(NSClass clazz)
-    {
-        this.entry = clazz;
-        this.currentClass = entry;
-        classes.put(clazz.name(), clazz);
-        printContent(clazz);
-    }
-
-    public void launch() throws NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
-    {
-        if(entry.rootMethod() == null)
-        {
-            throwVMError("No entry point found in " + entry);
-        }
-        else
-        {
-            methodCall(entry.rootMethod(), null);
-        }
-    }
-
     /**
      * Calls a given method
      * @param def
@@ -78,6 +58,11 @@ public class NSVirtualMachine
      */
     public void methodCall(NSAbstractMethod def, Stack<NSObject> valueStack) throws NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
     {
+        methodCall(def, valueStack, false);
+    }
+
+    public void methodCall(NSAbstractMethod def, Stack<NSObject> valueStack, boolean selfOnStack) throws NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
+    {
         NSClass oldClass = currentClass;
         String owner = def.owner();
         NSClass ownerClass = getOrLoad(owner);
@@ -89,13 +74,20 @@ public class NSVirtualMachine
         {
             if(func instanceof NSFuncDef)
             {
-                NSVariable[] vars = new NSVariable[def.paramNames().size() + 1];
+                NSVariable[] vars = new NSVariable[def.types().size() + 1];
                 for(int i = vars.length - 1; i >= 1; i-- )
                 {
                     NSObject object = valueStack.pop();
                     vars[i] = new NSVariable(object.type(), func.paramNames().get(i - 1), i).value(object);
                 }
-                vars[0] = getSelfInstance(currentClass);
+                if(selfOnStack)
+                {
+                    NSObject self = valueStack.pop();
+                    System.out.println("Self: " + self);
+                    vars[0] = new NSVariable(self.type(), "self", 0).value(self);
+                }
+                else
+                    vars[0] = getSelfInstance(currentClass);
                 NSObject object = interpreter.interpret(currentClass, ((NSFuncDef) func).instructions(), vars);
                 if(object != null)
                 {
@@ -259,6 +251,48 @@ public class NSVirtualMachine
     public static NSVirtualMachine instance()
     {
         return runningInstance;
+    }
+
+    public NSVirtualMachine addClass(NSClass clazz) throws NSClassNotFoundException
+    {
+        classes.put(clazz.name(), clazz);
+        printContent(clazz);
+        NSType type = new NSClassType(clazz);
+        NSTypes.list().add(type);
+        return this;
+    }
+
+    public NSVirtualMachine entryPoint(NSClass clazz)
+    {
+        this.entry = clazz;
+        this.currentClass = entry;
+        classes.put(clazz.name(), clazz);
+        printContent(clazz);
+        return this;
+    }
+
+    public NSVirtualMachine launch() throws NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
+    {
+        if(entry.rootMethod() == null)
+        {
+            throwVMError("No entry point found in " + entry);
+        }
+        else
+        {
+            methodCall(entry.rootMethod(), new Stack<>());
+        }
+        return this;
+    }
+
+    public NSObject getNewInstance(NSClass clazz, List<NSType> types, Stack<NSObject> valuesStack) throws NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
+    {
+        NSType type = getType(clazz.name());
+        NSObject object = new NSObject(type).value(new Object());
+        valuesStack.add(valuesStack.size() - types.size() + 1, object);
+        System.out.println("Added " + object + " at index " + (valuesStack.size() - types.size() - 1) + ". Size of stack: " + (valuesStack.size() - 1) + ", size of types: " + types.size());
+        types.remove(0);
+        methodCall(clazz.method("$", types), valuesStack, true);
+        return object;
     }
 
 }

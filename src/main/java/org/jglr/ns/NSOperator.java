@@ -24,7 +24,8 @@ public enum NSOperator
     UNSIGNED_RIGHT_SHIFT(">>>", 5),
     MEMBER_ACCESS(".", 7),
     INCREMENT("++", 2),
-    DECREMENT("--", 2);
+    DECREMENT("--", 2),
+    NEW("new", 10);
 
     private int    precedence;
     private String string;

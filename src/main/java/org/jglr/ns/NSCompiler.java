@@ -18,7 +18,7 @@ public class NSCompiler implements NSOps
     private String                              labelBase;
     private NSType                              pendingType;
     private int                                 varId;
-    private String                              currentVariable;
+    private Stack<String>                       currentVariable;
     private HashMapWithDefault<String, Integer> varName2Id;
     private String                              namespace;        // FIXME: USE ME PLZ
     private NSFuncDef                           currentMethodDef;
@@ -32,11 +32,15 @@ public class NSCompiler implements NSOps
     private Stack<LoopStartingPoint>            loopStartStack;
     private boolean                             inComment = false;
     private NSClassType                         selfType;
-    private boolean                             inFieldDef;
+    private HashMapWithDefault<String, NSType>  types;
 
     public NSCompiler()
     {
         NSOps.initAllNames();
+    }
+
+    private void reset()
+    {
         this.namespace = "std";
         labelBase = "L";
         varName2Id = new HashMapWithDefault<>();
@@ -45,8 +49,10 @@ public class NSCompiler implements NSOps
         varName2Type.setDefault(null);
         varId2Name = new HashMapWithDefault<>();
         varId2Name.setDefault(null);
+        types = new HashMapWithDefault<>();
         states = new Stack<>();
         loopStartStack = new Stack<>();
+        currentVariable = new Stack<>();
         rootMethod = currentMethodDef = (NSFuncDef) new NSFuncDef().name(NSFuncDef.ROOT_ID);
     }
 
@@ -57,6 +63,7 @@ public class NSCompiler implements NSOps
 
     public NSClass compile(NSSourceFile source) throws NSCompilerException, IOException
     {
+        reset();
         this.clazz = new NSClass(source.name().substring(0, source.name().indexOf("."))).sourceFile(source.name());
         clazz.rootMethod(rootMethod.owner(clazz.name()));
         this.source = source.content();
@@ -85,10 +92,9 @@ public class NSCompiler implements NSOps
             {
                 finalInstructions.add(new LineNumberInsn( ++lineNumber));
             }
-            else if(nSCodeToken.type == NSTokenType.KEYWORD && nSCodeToken.content.equals(NSKeywords.COMMENT_START.raw()))
+            else if(nSCodeToken.type == NSTokenType.KEYWORD && NSKeywords.COMMENT_START.is(nSCodeToken.content))
             {
                 inComment = true;
-                System.out.println(">>>> COMMENT");
             }
             else if(!inComment)
             {
@@ -110,6 +116,14 @@ public class NSCompiler implements NSOps
         {
             throwCompilerError("Instruction stack isn't empty. Problem while reading the source code.");
         }
+
+        while(labelBase.contains(SUB_LABEL_SEPARATOR))
+        {
+            popLabelID();
+            System.out.println("SUB: >> " + getCurrentLabelID());
+            finalInstructions.add(new LabelInsn(new Label(getCurrentLabelID())));
+        }
+
         // We analyse the function calls to find if the owner is this class or another
         for(NSAbstractMethod m : clazz.methods())
         {
@@ -190,7 +204,7 @@ public class NSCompiler implements NSOps
                     {
                         for(NSKeywords keyword : NSKeywords.values())
                         {
-                            if(keyword.raw().equals(buffer.toString()))
+                            if(keyword.is(buffer.toString()))
                             {
                                 return new KeywordToken(keyword);
                             }
@@ -228,7 +242,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -252,7 +266,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -276,7 +290,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -300,7 +314,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -323,7 +337,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -348,7 +362,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -381,7 +395,7 @@ public class NSCompiler implements NSOps
                 if(!buffer.toString().isEmpty())
                     for(NSKeywords keyword : NSKeywords.values())
                     {
-                        if(keyword.raw().equals(buffer.toString()))
+                        if(keyword.is(buffer.toString()))
                         {
                             return new KeywordToken(keyword);
                         }
@@ -415,7 +429,7 @@ public class NSCompiler implements NSOps
         if(buffer.toString().isEmpty())
             for(NSKeywords keyword : NSKeywords.values())
             {
-                if(source.indexOf(keyword.raw(), index) == index)
+                if(keyword.isAt(index, source))
                 {
                     index += keyword.raw().length();
                     return new KeywordToken(keyword);
@@ -437,7 +451,7 @@ public class NSCompiler implements NSOps
         {
             for(NSKeywords keyword : NSKeywords.values())
             {
-                if(keyword.raw().equals(buffer.toString()))
+                if(keyword.is(buffer.toString()))
                 {
                     return new KeywordToken(keyword);
                 }
@@ -612,123 +626,125 @@ public class NSCompiler implements NSOps
             }
             else
             {
-                handleToken(token, 0, new ArrayList<NSCodeToken>(), insnList);
+                tokenList.add(token);
+                handleToken(token, 0, tokenList, new ArrayList<NSCodeToken>(), insnList);
+                tokenList.clear();
             }
         }
         else
         {
             List<NSCodeToken> rpnList = toRPN(tokenList);
-            tokenList.clear();
             int index = 0;
             for(NSCodeToken nSCodeToken : rpnList)
             {
-                handleToken(nSCodeToken, index++ , rpnList, insnList);
+                handleToken(nSCodeToken, index++ , tokenList, rpnList, insnList);
             }
+            tokenList.clear();
         }
-        insnList.forEach(System.out::println);
     }
 
-    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
+    @SuppressWarnings("unchecked")
+    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> rawTokenList, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
     {
         System.out.println(">> " + token.type.name() + " : " + token.content);
         switch(token.type)
         {
             case WORD:
             {
-                for(NSType type : NSTypes.list())
+                NSCodeToken nextToken = nextToken(token, tokenList, rawTokenList);
+                boolean isType = false;
+                if(nextToken != null && pendingType == null)
                 {
-                    if(type.getID().equals(token.content))
+                    if(nextToken.type == NSTokenType.WORD) // If the next token is a word, then the current one is a type
                     {
-                        pendingType = type;
+                        pendingType = getType(token.content);
                         if(inFunctionDef)
                         {
-                            currentMethodDef.types().add(type);
+                            currentMethodDef.types().add(pendingType);
                         }
                         return;
                     }
                 }
-                if(isNumber(token.content))
+                if(!isType)
                 {
-                    try
+                    if(isNumber(token.content))
                     {
-                        int value = Integer.parseInt(token.content);
-                        insnList.add(new NSLoadIntInsn(value));
-                        typeStack.push(NSTypes.INT_TYPE);
-                        return;
-                    }
-                    catch(Exception e)
-                    {
-                        ;
-                    }
+                        try
+                        {
+                            int value = Integer.parseInt(token.content);
+                            insnList.add(new NSLoadIntInsn(value));
+                            typeStack.push(NSTypes.INT_TYPE);
+                            pendingType = null;
+                            return;
+                        }
+                        catch(Exception e)
+                        {
+                            ;
+                        }
 
-                    float value = Float.parseFloat(token.content);
-                    insnList.add(new NSLoadFloatInsn(value));
-                    typeStack.push(NSTypes.FLOAT_TYPE);
-                }
-                else
-                {
-                    int vindex = -1;
-                    boolean justCreated = false;
-                    if(pendingType != null)
-                    {
-                        if(inFunctionDef)
-                        {
-                            currentMethodDef.paramNames().add(token.content);
-                        }
-                        else
-                        {
-                            vindex = nextVarIndex();
-                            if(currentMethodDef == rootMethod && inFieldDef)
-                            {
-                                NSField field = new NSField(pendingType, token.content);
-                                field.value(new NSObject(pendingType));
-                                clazz.fields().add(field);
-                            }
-                            else
-                            {
-                                insnList.add(new NewVarInsn(pendingType, token.content, vindex));
-                            }
-                            inFieldDef = false;
-                            justCreated = true;
-                            varName2Type.put(token.content, pendingType);
-                            varName2Id.put(token.content, vindex);
-                            varId2Name.put(vindex, token.content);
-                        }
+                        float value = Float.parseFloat(token.content);
+                        insnList.add(new NSLoadFloatInsn(value));
+                        typeStack.push(NSTypes.FLOAT_TYPE);
                         pendingType = null;
                     }
                     else
                     {
-                        vindex = -1;
-                        if(varName2Id.containsKey(token.content))
+                        int vindex = -1;
+                        boolean justCreated = false;
+                        if(pendingType != null)
                         {
-                            vindex = varName2Id.get(token.content);
-                        }
-                    }
-                    if(!inFunctionDef)
-                    {
-                        this.currentVariable = varId2Name.get(vindex);
-                        if(clazz.hasField(token.content))
-                        {
-                            if(!justCreated)
+                            if(inFunctionDef)
                             {
-                                loadSelfIfNecessary(insnList);
-                                insnList.add(new NSFieldInsn(token.content));
-                                typeStack.pop();
-                                try
-                                {
-                                    typeStack.push(clazz.field(token.content).type());
-                                }
-                                catch(NSNoSuchFieldException e)
-                                {
-                                    e.printStackTrace();
-                                }
+                                currentMethodDef.paramNames().add(token.content);
                             }
+                            else
+                            {
+                                vindex = nextVarIndex();
+                                insnList.add(new NewVarInsn(pendingType, token.content, vindex));
+                                justCreated = true;
+                                varName2Type.put(token.content, pendingType);
+                                varName2Id.put(token.content, vindex);
+                                varId2Name.put(vindex, token.content);
+                            }
+                            pendingType = null;
+                            currentVariable.push(token.content);
                         }
                         else
                         {
-                            insnList.add(new NSVarInsn(VAR_LOAD, vindex));
-                            typeStack.push(varName2Type.get(token.content));
+                            vindex = -1;
+                            if(varName2Id.containsKey(token.content))
+                            {
+                                vindex = varName2Id.get(token.content);
+                            }
+                            currentVariable.push(token.content);
                         }
+                        if(!inFunctionDef)
+                        {
+                            if(clazz.hasField(token.content))
+                            {
+                                if(!justCreated)
+                                {
+                                    loadSelfIfNecessary(insnList);
+                                    insnList.add(new NSFieldInsn(token.content));
+                                    typeStack.pop();
+                                    try
+                                    {
+                                        typeStack.push(clazz.field(token.content).type());
+                                    }
+                                    catch(NSNoSuchFieldException e)
+                                    {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                                typeStack.push(varName2Type.get(token.content));
+                            }
+                            currentVariable.push(token.content);
+                        }
+                        pendingType = null;
                     }
                 }
             }
@@ -750,14 +766,18 @@ public class NSCompiler implements NSOps
                     if(previous.getOpcode() == FUNCTION_CALL)
                     {
                         FunctionCallInsn callInsn = (FunctionCallInsn) previous;
-                        System.out.println(">>>> " + callInsn.functionOwner());
-                        callInsn.functionOwner(typeStack.get(0).getID());
-                        NSType type = typeStack.remove(0);
+                        callInsn.functionOwner(typeStack.get(currentVariable.isEmpty() ? 0 : 1).getID());
+                        NSType type = typeStack.pop();
+                        NSType var = null;
+                        if(!currentVariable.isEmpty())
+                            var = typeStack.pop();
                         List<NSType> list = (List<NSType>) typeStack.clone();
                         if(list.isEmpty())
                             list.add(type);
                         callInsn.types(list);
-                        typeStack.add(0, type);
+                        typeStack.push(type);
+                        if(!currentVariable.isEmpty())
+                            typeStack.push(var);
                     }
                     else if(previous.getOpcode() == VAR_LOAD)
                     {
@@ -767,27 +787,40 @@ public class NSCompiler implements NSOps
                 }
                 else if(operator == NSOperator.ASSIGNEMENT)
                 {
-                    if(currentVariable == null)
+                    if(currentVariable.isEmpty())
                     {
                         throwCompilerException("Tried to assign a value to an object that is not a variable.");
                     }
                     else
                     {
-                        if(clazz.hasField(currentVariable))
+                        System.out.println("ON ASSIGN: " + currentVariable.peek());
+                        if(clazz.hasField(currentVariable.peek()))
                         {
                             loadSelfIfNecessary(insnList);
-                            insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable));
+                            insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable.peek()));
                             typeStack.pop();
                         }
                         else
-                            insnList.add(new NSVarInsn(VAR_STORE, varName2Id.get(currentVariable)));
+                            insnList.add(new NSVarInsn(VAR_STORE, varName2Id.get(currentVariable.peek())));
                         typeStack.pop();
                     }
-                    currentVariable = null;
+                    currentVariable.pop();
+                }
+                else if(operator == NSOperator.NEW)
+                {
+                    NSInsn insn = insnList.remove(insnList.size() - 1);
+                    if(insn instanceof FunctionCallInsn)
+                    {
+                        FunctionCallInsn callInsn = (FunctionCallInsn) insn;
+                        insnList.add(new NSNewInsn().types(callInsn.types()).functionOwner(callInsn.functionName()));
+                    }
+                    else
+                        throwCompilerException("Invalid type after 'new' keyword: " + insn);
+
                 }
                 else if(operator == NSOperator.INCREMENT || operator == NSOperator.DECREMENT)
                 {
-                    if(currentVariable == null)
+                    if(currentVariable.isEmpty())
                     {
                         throwCompilerException("Invalid argument for operator ++/--");
                     }
@@ -797,13 +830,13 @@ public class NSCompiler implements NSOps
                         insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
                         typeStack.pop(); // We remove the two values on which the operation was performed
 
-                        if(clazz.hasField(currentVariable))
+                        if(clazz.hasField(currentVariable.peek()))
                         {
-                            insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable));
-                            insnList.add(new NSFieldInsn(currentVariable));
+                            insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable.peek()));
+                            insnList.add(new NSFieldInsn(currentVariable.peek()));
                             try
                             {
-                                typeStack.push(clazz.field(currentVariable).type());
+                                typeStack.push(clazz.field(currentVariable.peek()).type());
                             }
                             catch(NSNoSuchFieldException e)
                             {
@@ -812,9 +845,9 @@ public class NSCompiler implements NSOps
                         }
                         else
                         {
-                            insnList.add(new NSVarInsn(VAR_STORE, varName2Id.get(currentVariable)));
-                            insnList.add(new NSVarInsn(VAR_LOAD, varName2Id.get(currentVariable)));
-                            typeStack.push(varName2Type.get(currentVariable));
+                            insnList.add(new NSVarInsn(VAR_STORE, varName2Id.get(currentVariable.peek())));
+                            insnList.add(new NSVarInsn(VAR_LOAD, varName2Id.get(currentVariable.peek())));
+                            typeStack.push(varName2Type.get(currentVariable.peek()));
                         }
                     }
                 }
@@ -835,10 +868,23 @@ public class NSCompiler implements NSOps
                 if(inFunctionDef)
                 {
                     currentMethodDef.name(token.content);
+                    if(clazz.hasMethod(currentMethodDef.name(), currentMethodDef.types()))
+                    {
+                        try
+                        {
+                            NSAbstractMethod existing = clazz.method(currentMethodDef.name(), currentMethodDef.types());
+                            if(existing != currentMethodDef && existing != rootMethod)
+                                throwCompilerException("Method " + currentMethodDef.toString() + " already exists.");
+                        }
+                        catch(NSNoSuchMethodException e)
+                        {
+                            e.printStackTrace();
+                        }
+                    }
                 }
                 else
                 {
-                    insnList.add(new FunctionCallInsn(token.content).functionOwner(FunctionCallInsn.UNKNOWN_YET).types(typeStack));
+                    insnList.add(new FunctionCallInsn(token.content).functionOwner(FunctionCallInsn.UNKNOWN_YET).types((List<NSType>) typeStack.clone()));
                 }
             }
                 break;
@@ -932,6 +978,12 @@ public class NSCompiler implements NSOps
 
                     case FUNCTION_DEF:
                     {
+                        while(labelBase.contains(SUB_LABEL_SEPARATOR))
+                        {
+                            popLabelID();
+                            System.out.println("SUB: >> " + getCurrentLabelID());
+                            insnList.add(new LabelInsn(new Label(getCurrentLabelID())));
+                        }
                         inFunctionDef = true;
                         pushState();
                         currentMethodDef = (NSFuncDef) new NSFuncDef().owner(clazz.name());
@@ -953,7 +1005,9 @@ public class NSCompiler implements NSOps
                                 varName2Id.put(name, varId);
                                 varId2Name.put(varId, name);
                                 varName2Type.put(name, type);
+                                varId++ ;
                             }
+
                         }
                         else
                             throwCompilerException("You must be defining a method to use a code block starting point");
@@ -979,15 +1033,18 @@ public class NSCompiler implements NSOps
                         break;
 
                     case FIELD:
-                        inFieldDef = true;
                         insnList.remove(insnList.size() - 1);
                         typeStack.pop();
                         NewVarInsn newVar = (NewVarInsn) insnList.remove(insnList.size() - 1);
                         NSField field = new NSField(newVar.type(), newVar.name());
                         varId = newVar.varIndex();
-                        field.value(new NSObject(newVar.type()));
+                        field.value(new NSObject(newVar.type(), newVar.type().emptyObject().value()));
                         clazz.fields().add(field);
-                        System.out.println("FOUND FIELD");
+                        break;
+
+                    case SELF:
+                        insnList.add(new NSVarInsn(VAR_LOAD, 0));
+                        typeStack.push(selfType);
                         break;
 
                     default:
@@ -999,6 +1056,30 @@ public class NSCompiler implements NSOps
             default:
                 break;
         }
+    }
+
+    private NSType getType(String content)
+    {
+        for(NSType type : NSTypes.list()) // TODO: Custom types
+        {
+            if(type.getID().equals(content))
+            {
+                return type;
+            }
+        }
+        if(!types.containsKey(content))
+        {
+            types.put(content, new NSDummyType(content));
+        }
+        return types.get(content);
+    }
+
+    private NSCodeToken nextToken(NSCodeToken token, List<NSCodeToken> tokenList, List<NSCodeToken> rawTokenList)
+    {
+        int index = rawTokenList.indexOf(token);
+        if(index < 0 || index + 1 >= rawTokenList.size())
+            return null;
+        return rawTokenList.get(index + 1);
     }
 
     private void loadSelfIfNecessary(List<NSInsn> insnList)

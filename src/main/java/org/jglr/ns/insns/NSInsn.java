@@ -21,7 +21,7 @@ public abstract class NSInsn implements NSOps
 
     public String toString()
     {
-        return NSOps.name(opcode);
+        return NSOps.name(getOpcode());
     }
 
     public abstract NSInsn write(DataOutput out) throws IOException;
