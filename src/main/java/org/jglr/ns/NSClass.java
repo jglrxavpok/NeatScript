@@ -13,12 +13,39 @@ public class NSClass
     private NSAbstractMethod       rootMethod;
     private String                 sourceFile;
     private String                 superclass;
+    private List<NSField>          fields;
 
     public NSClass(String name)
     {
         this.name = name;
         methodsDef = new ArrayList<NSAbstractMethod>();
+        fields = new ArrayList<>();
         superclass("Object");
+    }
+
+    public List<NSField> fields()
+    {
+        return fields;
+    }
+
+    public boolean hasField(String name)
+    {
+        for(NSField field : fields)
+        {
+            if(field.name().equals(name))
+                return true;
+        }
+        return false;
+    }
+
+    public NSField field(String name) throws NSNoSuchFieldException
+    {
+        for(NSField field : fields)
+        {
+            if(field.name().equals(name))
+                return field;
+        }
+        throw new NSNoSuchFieldException(this, name);
     }
 
     public String superclass()
@@ -94,5 +121,28 @@ public class NSClass
         if(sourceFile == null)
             return "_dynamic_";
         return sourceFile;
+    }
+
+    public boolean hasMethod(String methodName, List<NSType> types)
+    {
+        methodSearch: for(NSAbstractMethod method : methodsDef)
+        {
+            if(method.name().equals(methodName))
+            {
+                if(types.size() != method.types().size())
+                {
+                    continue;
+                }
+                for(int i = 0; i < types.size(); i++ )
+                {
+                    if(!types.get(i).getID().equals(method.types().get(i).getID()))
+                    {
+                        continue methodSearch;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
     }
 }

@@ -4,17 +4,17 @@ import java.io.*;
 
 import org.jglr.ns.vm.*;
 
-public class LoadFieldInsn extends NSInsn
+public class NSFieldInsn extends NSInsn
 {
 
     private String fieldName;
 
-    public LoadFieldInsn(String fieldName)
+    public NSFieldInsn(String fieldName)
     {
         this(GET_FIELD, fieldName);
     }
 
-    public LoadFieldInsn(int opcode, String fieldName)
+    public NSFieldInsn(int opcode, String fieldName)
     {
         super(opcode);
         this.fieldName = fieldName;

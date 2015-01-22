@@ -19,16 +19,24 @@ public class NSInterpreter implements NSOps, NSTypes
         NSOps.initAllNames();
     }
 
-    public NSObject interpret(List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
+    public NSObject interpret(NSClass clazz, List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
     {
         int index = 0;
         Stack<NSObject> heapStack = new Stack<>();
         HashMap<Integer, NSVariable> variables = new HashMap<>();
         Stack<NSObject> valuesStack = new Stack<>();
+        NSObject self = null;
         for(int i = 0; i < startVariables.length; i++ )
         {
+            if(i == 0)
+            {
+                self = startVariables[i].value();
+            }
+            else
+                variables.put(i - 1, startVariables[i]);
             variables.put(i, startVariables[i]);
         }
+
         lineNumber = 0;
         //        for(NSInsn insn : insns)
         //        {
@@ -76,7 +84,7 @@ public class NSInterpreter implements NSOps, NSTypes
             {
                 LabelInsn jumpInsn = (LabelInsn) insn;
                 index = gotoLabel(insns, index, jumpInsn.label()) - 1;
-                System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
+                // TODO: Debug, uncomment if necessary                System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
             }
             else if(insn.getOpcode() == IF_NOT_GOTO || insn.getOpcode() == IF_GOTO)
             {
@@ -86,7 +94,7 @@ public class NSInterpreter implements NSOps, NSTypes
                 if(result == (insn.getOpcode() == IF_GOTO ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE))
                 {
                     index = gotoLabel(insns, index, jumpInsn.label()) - 1;
-                    System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
+                    // TODO: Debug, uncomment if necessary            System.out.println("[DEBUG] Jumping to label " + jumpInsn.label().id());
                 }
             }
             else if(insn.getOpcode() == STACK_PUSH)
@@ -119,14 +127,22 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == VAR_LOAD)
             {
                 NSVarInsn varInsn = (NSVarInsn) insn;
-                NSVariable var = variables.get(varInsn.varIndex());
-                if(var == null)
+                int vindex = varInsn.varIndex();
+                if(vindex == 0) // this
                 {
-                    throwRuntimeException("Tried to load invalid variable index: " + varInsn.varIndex(), lineNumber, index, insn);
+                    valuesStack.push(self);
                 }
                 else
                 {
-                    valuesStack.push(var.value());
+                    NSVariable var = variables.get(vindex);
+                    if(var == null)
+                    {
+                        throwRuntimeException("Tried to load invalid variable index: " + varInsn.varIndex(), lineNumber, index, insn);
+                    }
+                    else
+                    {
+                        valuesStack.push(var.value());
+                    }
                 }
             }
             else if(insn.getOpcode() == VAR_STORE)
@@ -154,13 +170,28 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == GET_FIELD)
             {
                 NSObject var = valuesStack.pop();
-                NSObject field = var.field(((LoadFieldInsn) insn).fieldName());
+                NSObject field = var.field(((NSFieldInsn) insn).fieldName());
                 if(field == null)
                 {
-                    throwRuntimeException("Unknown field: " + ((LoadFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
+                    throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
                 }
                 else
                     valuesStack.push(field);
+            }
+            else if(insn.getOpcode() == STORE_FIELD)
+            {
+                System.out.println("HELLO");
+                NSObject var = valuesStack.pop();
+                NSObject field = var.field(((NSFieldInsn) insn).fieldName());
+                if(field == null)
+                {
+                    throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
+                }
+                else
+                {
+                    field.value(valuesStack.pop().value());
+                    System.out.println("Saved to field: " + ((NSFieldInsn) insn).fieldName() + " => " + field.value());
+                }
             }
             else if(insn.getOpcode() == FUNCTION_CALL)
             {
@@ -187,6 +218,16 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == RETURN_VALUE)
             {
                 return valuesStack.pop();
+            }
+            else if(insn.getOpcode() == NEW)
+            {
+                NSNewInsn newInsn = (NSNewInsn) insn;
+                NSClass ownerClass = vm.getOrLoad(newInsn.functionOwner());
+                NSObject object = vm.getNewInstance(ownerClass, newInsn.types(), valuesStack);
+                //                NSAbstractMethod method = ownerClass.method(newInsn.functionName(), newInsn.types());
+                //                method.owner(newInsn.functionOwner());
+                //                vm.methodCall(method, valuesStack);
+                valuesStack.push(object);
             }
         }
         return null;

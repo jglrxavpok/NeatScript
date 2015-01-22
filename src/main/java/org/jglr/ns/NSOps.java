@@ -107,6 +107,16 @@ public interface NSOps
      */
     public static final int               FLOAD            = 0x13;
 
+    /**
+     * Stores a value on the given field
+     */
+    public static final int               STORE_FIELD      = 0x14;
+
+    /**
+     * Creates a new instance of given type
+     */
+    public static final int               NEW              = 0x15;
+
     @Deprecated
     public static final int               GET_STATIC_FIELD = -1;
 

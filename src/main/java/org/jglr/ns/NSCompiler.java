@@ -6,39 +6,53 @@ import java.util.*;
 import org.jglr.ns.compiler.*;
 import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
+import org.jglr.ns.vm.*;
 
 public class NSCompiler implements NSOps
 {
 
-    private int                      index;
-    private String                   source;
-    private int                      line;
-    private int                      labelID;
-    private String                   labelBase;
-    private NSType                   pendingType;
-    private int                      varId;
-    private int                      currentVariable;
-    private HashMap<String, Integer> varName2Id;
-    private String                   namespace;        // FIXME: USE ME PLZ
-    private NSFuncDef                currentMethodDef;
-    private boolean                  inFunctionDef;
-    private NSFuncDef                rootMethod;
-    private NSClass                  clazz;
-    private Stack<NSType>            typeStack;
-    private HashMap<String, NSType>  varName2Type;
-    private Stack<CompilerState>     states;
-    private Stack<LoopStartingPoint> loopStartStack;
-    private boolean                  inComment = false;
+    private int                                 index;
+    private String                              source;
+    private int                                 line;
+    private int                                 labelID;
+    private String                              labelBase;
+    private NSType                              pendingType;
+    private int                                 varId;
+    private Stack<String>                       currentVariable;
+    private HashMapWithDefault<String, Integer> varName2Id;
+    private String                              namespace;        // FIXME: USE ME PLZ
+    private NSFuncDef                           currentMethodDef;
+    private boolean                             inFunctionDef;
+    private NSFuncDef                           rootMethod;
+    private NSClass                             clazz;
+    private Stack<NSType>                       typeStack;
+    private HashMapWithDefault<String, NSType>  varName2Type;
+    private HashMapWithDefault<Integer, String> varId2Name;
+    private Stack<CompilerState>                states;
+    private Stack<LoopStartingPoint>            loopStartStack;
+    private boolean                             inComment = false;
+    private NSClassType                         selfType;
+    private HashMapWithDefault<String, NSType>  types;
 
     public NSCompiler()
     {
         NSOps.initAllNames();
+    }
+
+    private void reset()
+    {
         this.namespace = "std";
         labelBase = "L";
-        varName2Id = new HashMap<>();
-        varName2Type = new HashMap<>();
+        varName2Id = new HashMapWithDefault<>();
+        varName2Id.setDefault(-1);
+        varName2Type = new HashMapWithDefault<>();
+        varName2Type.setDefault(null);
+        varId2Name = new HashMapWithDefault<>();
+        varId2Name.setDefault(null);
+        types = new HashMapWithDefault<>();
         states = new Stack<>();
         loopStartStack = new Stack<>();
+        currentVariable = new Stack<>();
         rootMethod = currentMethodDef = (NSFuncDef) new NSFuncDef().name(NSFuncDef.ROOT_ID);
     }
 
@@ -49,11 +63,21 @@ public class NSCompiler implements NSOps
 
     public NSClass compile(NSSourceFile source) throws NSCompilerException, IOException
     {
+        reset();
         this.clazz = new NSClass(source.name().substring(0, source.name().indexOf("."))).sourceFile(source.name());
         clazz.rootMethod(rootMethod.owner(clazz.name()));
         this.source = source.content();
         this.index = 0;
         this.line = 0;
+        varId = 1;
+        try
+        {
+            selfType = new NSClassType(clazz, true);
+        }
+        catch(NSClassNotFoundException e1)
+        {
+            e1.printStackTrace();
+        }
         NSCodeToken nSCodeToken;
         ArrayList<NSCodeToken> tokenList = new ArrayList<NSCodeToken>();
         List<NSInsn> finalInstructions = null;
@@ -68,10 +92,9 @@ public class NSCompiler implements NSOps
             {
                 finalInstructions.add(new LineNumberInsn( ++lineNumber));
             }
-            else if(nSCodeToken.type == NSTokenType.KEYWORD && nSCodeToken.content.equals(NSKeywords.COMMENT_START.raw()))
+            else if(nSCodeToken.type == NSTokenType.KEYWORD && NSKeywords.COMMENT_START.is(nSCodeToken.content))
             {
                 inComment = true;
-                System.out.println(">>>> COMMENT");
             }
             else if(!inComment)
             {
@@ -93,6 +116,14 @@ public class NSCompiler implements NSOps
         {
             throwCompilerError("Instruction stack isn't empty. Problem while reading the source code.");
         }
+
+        while(labelBase.contains(SUB_LABEL_SEPARATOR))
+        {
+            popLabelID();
+            System.out.println("SUB: >> " + getCurrentLabelID());
+            finalInstructions.add(new LabelInsn(new Label(getCurrentLabelID())));
+        }
+
         // We analyse the function calls to find if the owner is this class or another
         for(NSAbstractMethod m : clazz.methods())
         {
@@ -104,33 +135,36 @@ public class NSCompiler implements NSOps
                     if(insn.getOpcode() == FUNCTION_CALL)
                     {
                         FunctionCallInsn callInsn = (FunctionCallInsn) insn;
-                        NSAbstractMethod calledMethod = null;
-                        try
+                        if(callInsn.functionOwner().equals(FunctionCallInsn.UNKNOWN_YET))
                         {
-                            calledMethod = clazz.method(callInsn.functionName(), callInsn.types());
-                        }
-                        catch(Exception e)
-                        {
-                            ; // We ignore this exception as there's one only if the method doesn't exist
-                        }
-
-                        if(calledMethod != null)
-                        {
-                            callInsn.functionOwner(clazz.name());
-                        }
-                        else
-                        {
-                            // TODO: Imports maybe ?
-                            callInsn.functionOwner("std");
-                            if(!callInsn.types().isEmpty())
+                            NSAbstractMethod calledMethod = null;
+                            try
                             {
-                                NSType type = callInsn.types().get(0);
-                                if(type.functions().containsKey(callInsn.functionName()))
+                                calledMethod = clazz.method(callInsn.functionName(), callInsn.types());
+                            }
+                            catch(Exception e)
+                            {
+                                ; // We ignore this exception as there's one only if the method doesn't exist
+                            }
+
+                            if(calledMethod != null)
+                            {
+                                callInsn.functionOwner(clazz.name());
+                            }
+                            else
+                            {
+                                // TODO: Imports maybe ?
+                                callInsn.functionOwner("std");
+                                if(!callInsn.types().isEmpty())
                                 {
-                                    callInsn.functionOwner(type.getID());
+                                    NSType type = callInsn.types().get(0);
+                                    if(type.functions().containsKey(callInsn.functionName()))
+                                    {
+                                        callInsn.functionOwner(type.getID());
+                                    }
+                                    else
+                                        ; // TODO: Check for user-defined types
                                 }
-                                else
-                                    ; // TODO: Check for user-defined types
                             }
                         }
                     }
@@ -170,7 +204,7 @@ public class NSCompiler implements NSOps
                     {
                         for(NSKeywords keyword : NSKeywords.values())
                         {
-                            if(keyword.raw().equals(buffer.toString()))
+                            if(keyword.is(buffer.toString()))
                             {
                                 return new KeywordToken(keyword);
                             }
@@ -208,7 +242,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -232,7 +266,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -256,7 +290,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -280,7 +314,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -303,7 +337,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -328,7 +362,7 @@ public class NSCompiler implements NSOps
                         {
                             for(NSKeywords keyword : NSKeywords.values())
                             {
-                                if(keyword.raw().equals(buffer.toString()))
+                                if(keyword.is(buffer.toString()))
                                 {
                                     return new KeywordToken(keyword);
                                 }
@@ -361,7 +395,7 @@ public class NSCompiler implements NSOps
                 if(!buffer.toString().isEmpty())
                     for(NSKeywords keyword : NSKeywords.values())
                     {
-                        if(keyword.raw().equals(buffer.toString()))
+                        if(keyword.is(buffer.toString()))
                         {
                             return new KeywordToken(keyword);
                         }
@@ -395,7 +429,7 @@ public class NSCompiler implements NSOps
         if(buffer.toString().isEmpty())
             for(NSKeywords keyword : NSKeywords.values())
             {
-                if(source.indexOf(keyword.raw(), index) == index)
+                if(keyword.isAt(index, source))
                 {
                     index += keyword.raw().length();
                     return new KeywordToken(keyword);
@@ -417,7 +451,7 @@ public class NSCompiler implements NSOps
         {
             for(NSKeywords keyword : NSKeywords.values())
             {
-                if(keyword.raw().equals(buffer.toString()))
+                if(keyword.is(buffer.toString()))
                 {
                     return new KeywordToken(keyword);
                 }
@@ -563,107 +597,154 @@ public class NSCompiler implements NSOps
             else if(token.type == NSTokenType.WORD && !inFunctionDef)
             {
                 int vindex = -1;
-                if(varName2Id.containsKey(token.content))
+                if(clazz.hasField(token.content))
                 {
-                    vindex = varName2Id.get(token.content);
-                }
-                if(vindex >= 0)
-                {
-                    insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                    insnList.add(new NSVarInsn(VAR_LOAD, 0));
+                    insnList.add(new NSFieldInsn(token.content));
                     List<NSType> types = new ArrayList<>();
                     types.add(NSTypes.STRING_TYPE);
                     insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
                 }
                 else
                 {
-                    throwCompilerException("Unexpected symbol: " + token.content);
+                    if(varName2Id.containsKey(token.content))
+                    {
+                        vindex = varName2Id.get(token.content);
+                    }
+                    if(vindex >= 0)
+                    {
+                        insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                        List<NSType> types = new ArrayList<>();
+                        types.add(NSTypes.STRING_TYPE);
+                        insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
+                    }
+                    else
+                    {
+                        throwCompilerException("Unexpected symbol: " + token.content);
+                    }
                 }
             }
             else
             {
-                handleToken(token, 0, new ArrayList<NSCodeToken>(), insnList);
+                tokenList.add(token);
+                handleToken(token, 0, tokenList, new ArrayList<NSCodeToken>(), insnList);
+                tokenList.clear();
             }
         }
         else
         {
             List<NSCodeToken> rpnList = toRPN(tokenList);
-            tokenList.clear();
             int index = 0;
             for(NSCodeToken nSCodeToken : rpnList)
             {
-                handleToken(nSCodeToken, index++ , rpnList, insnList);
+                handleToken(nSCodeToken, index++ , tokenList, rpnList, insnList);
             }
+            tokenList.clear();
         }
     }
 
-    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
+    @SuppressWarnings("unchecked")
+    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> rawTokenList, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
     {
         System.out.println(">> " + token.type.name() + " : " + token.content);
         switch(token.type)
         {
             case WORD:
             {
-                for(NSType type : NSTypes.list())
+                NSCodeToken nextToken = nextToken(token, tokenList, rawTokenList);
+                boolean isType = false;
+                if(nextToken != null && pendingType == null)
                 {
-                    if(type.getID().equals(token.content))
+                    if(nextToken.type == NSTokenType.WORD) // If the next token is a word, then the current one is a type
                     {
-                        pendingType = type;
+                        pendingType = getType(token.content);
                         if(inFunctionDef)
                         {
-                            currentMethodDef.types().add(type);
+                            currentMethodDef.types().add(pendingType);
                         }
                         return;
                     }
                 }
-                if(isNumber(token.content))
+                if(!isType)
                 {
-                    try
+                    if(isNumber(token.content))
                     {
-                        int value = Integer.parseInt(token.content);
-                        insnList.add(new NSLoadIntInsn(value));
-                        typeStack.push(NSTypes.INT_TYPE);
-                        return;
-                    }
-                    catch(Exception e)
-                    {
-                        ;
-                    }
+                        try
+                        {
+                            int value = Integer.parseInt(token.content);
+                            insnList.add(new NSLoadIntInsn(value));
+                            typeStack.push(NSTypes.INT_TYPE);
+                            pendingType = null;
+                            return;
+                        }
+                        catch(Exception e)
+                        {
+                            ;
+                        }
 
-                    float value = Float.parseFloat(token.content);
-                    insnList.add(new NSLoadFloatInsn(value));
-                    typeStack.push(NSTypes.FLOAT_TYPE);
-                }
-                else
-                {
-                    int vindex = -1;
-                    if(pendingType != null)
-                    {
-                        if(inFunctionDef)
-                        {
-                            currentMethodDef.paramNames().add(token.content);
-                        }
-                        else
-                        {
-                            vindex = nextVarIndex();
-                            insnList.add(new NewVarInsn(pendingType, token.content, vindex));
-                            varName2Type.put(token.content, pendingType);
-                            varName2Id.put(token.content, vindex);
-                        }
+                        float value = Float.parseFloat(token.content);
+                        insnList.add(new NSLoadFloatInsn(value));
+                        typeStack.push(NSTypes.FLOAT_TYPE);
                         pendingType = null;
                     }
                     else
                     {
-                        vindex = -1;
-                        if(varName2Id.containsKey(token.content))
+                        int vindex = -1;
+                        boolean justCreated = false;
+                        if(pendingType != null)
                         {
-                            vindex = varName2Id.get(token.content);
+                            if(inFunctionDef)
+                            {
+                                currentMethodDef.paramNames().add(token.content);
+                            }
+                            else
+                            {
+                                vindex = nextVarIndex();
+                                insnList.add(new NewVarInsn(pendingType, token.content, vindex));
+                                justCreated = true;
+                                varName2Type.put(token.content, pendingType);
+                                varName2Id.put(token.content, vindex);
+                                varId2Name.put(vindex, token.content);
+                            }
+                            pendingType = null;
+                            currentVariable.push(token.content);
                         }
-                    }
-                    if(!inFunctionDef)
-                    {
-                        this.currentVariable = vindex;
-                        insnList.add(new NSVarInsn(VAR_LOAD, vindex));
-                        typeStack.push(varName2Type.get(token.content));
+                        else
+                        {
+                            vindex = -1;
+                            if(varName2Id.containsKey(token.content))
+                            {
+                                vindex = varName2Id.get(token.content);
+                            }
+                            currentVariable.push(token.content);
+                        }
+                        if(!inFunctionDef)
+                        {
+                            if(clazz.hasField(token.content))
+                            {
+                                if(!justCreated)
+                                {
+                                    loadSelfIfNecessary(insnList);
+                                    insnList.add(new NSFieldInsn(token.content));
+                                    typeStack.pop();
+                                    try
+                                    {
+                                        typeStack.push(clazz.field(token.content).type());
+                                    }
+                                    catch(NSNoSuchFieldException e)
+                                    {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                                typeStack.push(varName2Type.get(token.content));
+                            }
+                            currentVariable.push(token.content);
+                        }
+                        pendingType = null;
                     }
                 }
             }
@@ -685,30 +766,61 @@ public class NSCompiler implements NSOps
                     if(previous.getOpcode() == FUNCTION_CALL)
                     {
                         FunctionCallInsn callInsn = (FunctionCallInsn) previous;
-                        callInsn.functionOwner(FunctionCallInsn.PREVIOUS);
+                        callInsn.functionOwner(typeStack.get(currentVariable.isEmpty() ? 0 : 1).getID());
+                        NSType type = typeStack.pop();
+                        NSType var = null;
+                        if(!currentVariable.isEmpty())
+                            var = typeStack.pop();
+                        List<NSType> list = (List<NSType>) typeStack.clone();
+                        if(list.isEmpty())
+                            list.add(type);
+                        callInsn.types(list);
+                        typeStack.push(type);
+                        if(!currentVariable.isEmpty())
+                            typeStack.push(var);
                     }
                     else if(previous.getOpcode() == VAR_LOAD)
                     {
-                        insnList.set(insnList.size() - 1, new LoadFieldInsn(tokenList.get(tokenIndex - 1).content));
-                        typeStack.pop();
+                        insnList.set(insnList.size() - 1, new NSFieldInsn(tokenList.get(tokenIndex - 1).content));
+                        NSType owner = typeStack.pop();
                     }
                 }
                 else if(operator == NSOperator.ASSIGNEMENT)
                 {
-                    if(currentVariable == -1)
+                    if(currentVariable.isEmpty())
                     {
                         throwCompilerException("Tried to assign a value to an object that is not a variable.");
                     }
                     else
                     {
-                        insnList.add(new NSVarInsn(VAR_STORE, currentVariable));
+                        System.out.println("ON ASSIGN: " + currentVariable.peek());
+                        if(clazz.hasField(currentVariable.peek()))
+                        {
+                            loadSelfIfNecessary(insnList);
+                            insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable.peek()));
+                            typeStack.pop();
+                        }
+                        else
+                            insnList.add(new NSVarInsn(VAR_STORE, varName2Id.get(currentVariable.peek())));
                         typeStack.pop();
                     }
-                    currentVariable = -1;
+                    currentVariable.pop();
+                }
+                else if(operator == NSOperator.NEW)
+                {
+                    NSInsn insn = insnList.remove(insnList.size() - 1);
+                    if(insn instanceof FunctionCallInsn)
+                    {
+                        FunctionCallInsn callInsn = (FunctionCallInsn) insn;
+                        insnList.add(new NSNewInsn().types(callInsn.types()).functionOwner(callInsn.functionName()));
+                    }
+                    else
+                        throwCompilerException("Invalid type after 'new' keyword: " + insn);
+
                 }
                 else if(operator == NSOperator.INCREMENT || operator == NSOperator.DECREMENT)
                 {
-                    if(currentVariable == -1)
+                    if(currentVariable.isEmpty())
                     {
                         throwCompilerException("Invalid argument for operator ++/--");
                     }
@@ -716,14 +828,34 @@ public class NSCompiler implements NSOps
                     {
                         insnList.add(new NSLoadIntInsn(1));
                         insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
-                        insnList.add(new NSVarInsn(VAR_STORE, currentVariable));
-                        insnList.add(new NSVarInsn(VAR_LOAD, currentVariable));
+                        typeStack.pop(); // We remove the two values on which the operation was performed
+
+                        if(clazz.hasField(currentVariable.peek()))
+                        {
+                            insnList.add(new NSFieldInsn(STORE_FIELD, currentVariable.peek()));
+                            insnList.add(new NSFieldInsn(currentVariable.peek()));
+                            try
+                            {
+                                typeStack.push(clazz.field(currentVariable.peek()).type());
+                            }
+                            catch(NSNoSuchFieldException e)
+                            {
+                                e.printStackTrace();
+                            }
+                        }
+                        else
+                        {
+                            insnList.add(new NSVarInsn(VAR_STORE, varName2Id.get(currentVariable.peek())));
+                            insnList.add(new NSVarInsn(VAR_LOAD, varName2Id.get(currentVariable.peek())));
+                            typeStack.push(varName2Type.get(currentVariable.peek()));
+                        }
                     }
                 }
                 else
                 {
                     NSType lastType = typeStack.pop();
                     NSType type = typeStack.pop(); // We get the type right before the last type loaded
+                    System.out.println(type.getID() + " " + operator.toString() + " " + lastType.getID());
                     NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
                     typeStack.push(result.type());
                     insnList.add(new OperatorInsn(operator));
@@ -736,10 +868,23 @@ public class NSCompiler implements NSOps
                 if(inFunctionDef)
                 {
                     currentMethodDef.name(token.content);
+                    if(clazz.hasMethod(currentMethodDef.name(), currentMethodDef.types()))
+                    {
+                        try
+                        {
+                            NSAbstractMethod existing = clazz.method(currentMethodDef.name(), currentMethodDef.types());
+                            if(existing != currentMethodDef && existing != rootMethod)
+                                throwCompilerException("Method " + currentMethodDef.toString() + " already exists.");
+                        }
+                        catch(NSNoSuchMethodException e)
+                        {
+                            e.printStackTrace();
+                        }
+                    }
                 }
                 else
                 {
-                    insnList.add(new FunctionCallInsn(token.content).functionOwner(FunctionCallInsn.UNKNOWN_YET).types(typeStack));
+                    insnList.add(new FunctionCallInsn(token.content).functionOwner(FunctionCallInsn.UNKNOWN_YET).types((List<NSType>) typeStack.clone()));
                 }
             }
                 break;
@@ -751,6 +896,7 @@ public class NSCompiler implements NSOps
                 {
                     case IF:
                     {
+                        typeStack.pop();
                         insnList.add(new StackInsn(STACK_PUSH));
                         insnList.add(new StackInsn(STACK_PEEK));
                         insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
@@ -825,12 +971,19 @@ public class NSCompiler implements NSOps
                         insnList.add(new StackInsn(STACK_PUSH));
                         insnList.add(new StackInsn(STACK_PEEK));
                         insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
+                        typeStack.pop();
                         pushLabelID();
                     }
                         break;
 
                     case FUNCTION_DEF:
                     {
+                        while(labelBase.contains(SUB_LABEL_SEPARATOR))
+                        {
+                            popLabelID();
+                            System.out.println("SUB: >> " + getCurrentLabelID());
+                            insnList.add(new LabelInsn(new Label(getCurrentLabelID())));
+                        }
                         inFunctionDef = true;
                         pushState();
                         currentMethodDef = (NSFuncDef) new NSFuncDef().owner(clazz.name());
@@ -842,18 +995,19 @@ public class NSCompiler implements NSOps
                     {
                         if(inFunctionDef)
                         {
-                            //                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
                             inFunctionDef = false;
-                            varId = 0;
-                            varName2Id.clear(); // TODO: Might need to push it before clearing it to save root method variables
+                            varId = 1;
+                            varName2Id.clear();
                             for(int i = 0; i < currentMethodDef.paramNames().size(); i++ )
                             {
                                 String name = currentMethodDef.paramNames().get(i);
                                 NSType type = currentMethodDef.types().get(i);
                                 varName2Id.put(name, varId);
+                                varId2Name.put(varId, name);
                                 varName2Type.put(name, type);
-                                //                                currentMethodDef.instructions().add(new NewVarInsn(type, name, nextVarIndex()));
+                                varId++ ;
                             }
+
                         }
                         else
                             throwCompilerException("You must be defining a method to use a code block starting point");
@@ -871,10 +1025,26 @@ public class NSCompiler implements NSOps
                         if(typeStack != null)
                         {
                             insnList.add(new NSBaseInsn(RETURN_VALUE));
+                            typeStack.pop();
                         }
                         else
                             insnList.add(new NSBaseInsn(RETURN));
                     }
+                        break;
+
+                    case FIELD:
+                        insnList.remove(insnList.size() - 1);
+                        typeStack.pop();
+                        NewVarInsn newVar = (NewVarInsn) insnList.remove(insnList.size() - 1);
+                        NSField field = new NSField(newVar.type(), newVar.name());
+                        varId = newVar.varIndex();
+                        field.value(new NSObject(newVar.type(), newVar.type().emptyObject().value()));
+                        clazz.fields().add(field);
+                        break;
+
+                    case SELF:
+                        insnList.add(new NSVarInsn(VAR_LOAD, 0));
+                        typeStack.push(selfType);
                         break;
 
                     default:
@@ -886,6 +1056,59 @@ public class NSCompiler implements NSOps
             default:
                 break;
         }
+    }
+
+    private NSType getType(String content)
+    {
+        for(NSType type : NSTypes.list()) // TODO: Custom types
+        {
+            if(type.getID().equals(content))
+            {
+                return type;
+            }
+        }
+        if(!types.containsKey(content))
+        {
+            types.put(content, new NSDummyType(content));
+        }
+        return types.get(content);
+    }
+
+    private NSCodeToken nextToken(NSCodeToken token, List<NSCodeToken> tokenList, List<NSCodeToken> rawTokenList)
+    {
+        int index = rawTokenList.indexOf(token);
+        if(index < 0 || index + 1 >= rawTokenList.size())
+            return null;
+        return rawTokenList.get(index + 1);
+    }
+
+    private void loadSelfIfNecessary(List<NSInsn> insnList)
+    {
+        loadSelfIfNecessary(insnList.size() - 1, insnList);
+    }
+
+    private void loadSelfIfNecessary(int indexToCheck, List<NSInsn> insnList)
+    {
+        NSInsn insn = insnList.get(indexToCheck);
+        if(typeStack.isEmpty() || typeStack.peek() != selfType)
+        {
+            insnList.add(indexToCheck + 1, new NSVarInsn(VAR_LOAD, 0));
+            typeStack.push(selfType);
+        }
+        //        if(insn instanceof NSVarInsn)
+        //        {
+        //            if(insn.getOpcode() == VAR_LOAD)
+        //            {
+        //                if(((NSVarInsn) insn).varIndex() != 0)
+        //                {
+        //                    insnList.add(indexToCheck + 1, new NSVarInsn(VAR_LOAD, 0));
+        //                }
+        //            }
+        //            else
+        //                insnList.add(indexToCheck + 1, new NSVarInsn(VAR_LOAD, 0));
+        //        }
+        //        else
+        //            insnList.add(indexToCheck + 1, new NSVarInsn(VAR_LOAD, 0));
     }
 
     private boolean isNumber(String content)
@@ -952,10 +1175,11 @@ public class NSCompiler implements NSOps
 
     private void pushState()
     {
-        states.push(new CompilerState(varName2Id, varName2Type, varId, labelBase, labelID, currentMethodDef));
+        states.push(new CompilerState(varName2Id, varId2Name, varName2Type, varId, labelBase, labelID, currentMethodDef));
         varName2Id.clear();
+        varId2Name.clear();
         varName2Type.clear();
-        varId = 0;
+        varId = 1;
         labelBase = "L";
         labelID = 0;
     }
@@ -964,6 +1188,7 @@ public class NSCompiler implements NSOps
     {
         CompilerState state = states.pop();
         varName2Id = state.varNamesToIds();
+        varId2Name = state.varIdsToNames();
         varName2Type = state.varNamesToTypes();
         varId = state.varID();
         labelID = state.labelID();
