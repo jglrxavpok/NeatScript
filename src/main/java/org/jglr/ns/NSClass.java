@@ -2,6 +2,8 @@ package org.jglr.ns;
 
 import java.util.*;
 
+import com.google.common.collect.*;
+
 import org.jglr.ns.compiler.*;
 import org.jglr.ns.types.*;
 
@@ -13,11 +15,13 @@ public class NSClass
     private NSAbstractMethod       rootMethod;
     private String                 sourceFile;
     private String                 superclass;
+    private List<NSField>          fields;
 
     public NSClass(String name)
     {
         this.name = name;
         methodsDef = new ArrayList<NSAbstractMethod>();
+        fields = Lists.newArrayList();
         superclass("Object");
     }
 
@@ -94,5 +98,26 @@ public class NSClass
         if(sourceFile == null)
             return "_dynamic_";
         return sourceFile;
+    }
+
+    public NSField field(String name)
+    {
+        for(NSField f : fields)
+        {
+            if(f.name().equals(name))
+                return f;
+        }
+        return null;
+    }
+
+    public NSClass field(NSType type, String name)
+    {
+        return field(new NSField(type, name));
+    }
+
+    public NSClass field(NSField field)
+    {
+        fields.add(field);
+        return this;
     }
 }

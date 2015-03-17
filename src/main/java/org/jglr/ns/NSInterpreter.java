@@ -188,6 +188,22 @@ public class NSInterpreter implements NSOps, NSTypes
             {
                 return valuesStack.pop();
             }
+            else if(insn.getOpcode() == FIELD_LOAD)
+            {
+                NSFieldInsn fieldInsn = (NSFieldInsn) insn;
+                NSClass owner = vm.getOrLoad(fieldInsn.owner());
+                String fieldName = fieldInsn.name();
+                NSField field = owner.field(fieldName);
+                valuesStack.push(field.value());
+            }
+            else if(insn.getOpcode() == FIELD_SAVE)
+            {
+                NSFieldInsn fieldInsn = (NSFieldInsn) insn;
+                NSClass owner = vm.getOrLoad(fieldInsn.owner());
+                String fieldName = fieldInsn.name();
+                NSField field = owner.field(fieldName);
+                field.value(valuesStack.pop());
+            }
         }
         return null;
     }

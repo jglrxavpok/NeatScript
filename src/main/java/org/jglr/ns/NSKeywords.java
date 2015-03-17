@@ -9,6 +9,7 @@ public enum NSKeywords
     FUNCTION_DEF("function", true),
     CODE_BLOCK_START("{", true), CODE_BLOCK_END("}", true),
     RETURN("return"), WHILE("while"),
+    FIELD("field"),
     COMMENT_START("//");
 
     private String  keyword;

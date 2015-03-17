@@ -107,6 +107,16 @@ public interface NSOps
      */
     public static final int               FLOAD            = 0x13;
 
+    /**
+     * Loads a field onto the values stack
+     */
+    public static final int               FIELD_LOAD       = 0x14;
+
+    /**
+     * Saves into field from the values stack
+     */
+    public static final int               FIELD_SAVE       = 0x15;
+
     @Deprecated
     public static final int               GET_STATIC_FIELD = -1;
 

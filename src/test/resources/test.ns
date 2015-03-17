@@ -1,7 +1,7 @@
 "Start of program!";
 print("How are you going?" + " I'm a test program!" - " test");
 String txt = "Some text";
-String txt1 = "dzqdqz";
+field String txt1 = "dzqdqz";
 print("Size of txt1 is "+txt1.length()+" via length()");
 print("Size of txt1 is "+txt1.size+" via size");
 Int nbr = 10+2;
