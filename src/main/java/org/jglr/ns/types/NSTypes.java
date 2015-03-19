@@ -48,4 +48,29 @@ public interface NSTypes
         }
         return list;
     }
+
+    public static NSType fromID(String id)
+    {
+        for(NSType t : list)
+        {
+            if(t.getID().equals(id))
+                return t;
+        }
+        return null;
+    }
+
+    public static NSType fromIDOrDummy(String id)
+    {
+        NSType fromID = fromID(id);
+        if(fromID != null)
+            return fromID;
+        return new NSType(id, OBJECT_TYPE)
+        {
+            @Override
+            public NSObject emptyObject()
+            {
+                return new NSObject(this);
+            }
+        };
+    }
 }

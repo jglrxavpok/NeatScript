@@ -15,9 +15,7 @@ public class NSIntType extends NSType
         switch(operator)
         {
             case PLUS:
-            {
                 return new NSObject(this, (int) ((int) a.value() + (float) b.castedValue(NSTypes.FLOAT_TYPE)));
-            }
 
             case MINUS:
                 return new NSObject(this, (int) ((int) a.value() - (float) b.castedValue(NSTypes.FLOAT_TYPE)));
@@ -59,6 +57,14 @@ public class NSIntType extends NSType
     public NSObject emptyObject()
     {
         return new NSObject(this, 0);
+    }
+
+    @Override
+    public NSType init(NSObject object)
+    {
+        if(object.value() == null)
+            throw new IllegalArgumentException("Object has for value null but is int");
+        return super.init(object);
     }
 
     @Override

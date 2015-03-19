@@ -1,5 +1,7 @@
 package org.jglr.ns.compiler;
 
+import java.util.*;
+
 public class VariablePointer
 {
 
@@ -8,71 +10,81 @@ public class VariablePointer
         FIELD, VARIABLE;
     }
 
-    private VariablePointerMode mode;
-    private Object              value;
+    private Stack<VariablePointerMode> modes;
+    private Stack<Object>              values;
 
     public VariablePointer()
     {
-        mode = VariablePointerMode.VARIABLE;
+        modes = new Stack<VariablePointerMode>();
+        modes.push(VariablePointerMode.VARIABLE);
+
+        values = new Stack<Object>();
     }
 
-    public VariablePointerMode mode()
+    public VariablePointerMode peekMode()
     {
-        return mode;
+        return modes.peek();
     }
 
-    public VariablePointer mode(VariablePointerMode mode)
+    public VariablePointer pushMode(VariablePointerMode mode)
     {
-        this.mode = mode;
+        modes.push(mode);
         return this;
     }
 
-    public Object rawValue()
+    public Object peekRawValue()
     {
-        return value;
+        return values.peek();
     }
 
-    public VariablePointer rawValue(Object o)
+    public VariablePointer pushRawValue(Object o)
     {
-        this.value = o;
+        values.push(o);
         return this;
     }
 
-    public VariablePointer putVariable(int var)
+    public VariablePointer pushVariable(int var)
     {
-        mode(VariablePointerMode.VARIABLE);
-        rawValue(var);
+        pushMode(VariablePointerMode.VARIABLE);
+        pushRawValue(var);
         return this;
     }
 
-    public VariablePointer putField(FieldInfo field)
+    public VariablePointer pushField(FieldInfo field)
     {
-        mode(VariablePointerMode.FIELD);
-        rawValue(field);
+        pushMode(VariablePointerMode.FIELD);
+        pushRawValue(field);
         return this;
     }
 
-    public FieldInfo asField()
+    public FieldInfo peekField()
     {
-        if(mode() != VariablePointerMode.FIELD)
-            throw new IllegalStateException("Trying to access a field while in mode " + mode().name().toLowerCase());
-        return (FieldInfo) value;
+        if(peekMode() != VariablePointerMode.FIELD)
+            throw new IllegalStateException("Trying to access a field while in mode " + peekMode().name().toLowerCase());
+        return (FieldInfo) values.peek();
     }
 
-    public int asVarId()
+    public Object popValue()
     {
-        if(mode() != VariablePointerMode.VARIABLE)
-            throw new IllegalStateException("Trying to access a var ID while in mode " + mode().name().toLowerCase());
-        return (int) value;
+        modes.pop();
+        return values.pop();
+    }
+
+    public int peekVarId()
+    {
+        if(peekMode() != VariablePointerMode.VARIABLE)
+            throw new IllegalStateException("Trying to access a var ID while in mode " + peekMode().name().toLowerCase());
+        return (int) values.peek();
     }
 
     public boolean isField()
     {
-        return mode() == VariablePointerMode.FIELD;
+        return peekMode() == VariablePointerMode.FIELD;
     }
 
     public boolean isVar()
     {
-        return mode() == VariablePointerMode.VARIABLE;
+        return peekMode() == VariablePointerMode.VARIABLE;
     }
+
 }

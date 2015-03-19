@@ -37,7 +37,7 @@ public class NSCompiler implements NSOps
     {
         NSOps.initAllNames();
         varPointer = new VariablePointer();
-        varPointer.mode(VariablePointerMode.VARIABLE);
+        varPointer.pushMode(VariablePointerMode.VARIABLE);
         this.namespace = "std";
         labelBase = "L";
         varName2Id = new HashMap<>();
@@ -668,13 +668,13 @@ public class NSCompiler implements NSOps
                     {
                         if(clazz.field(token.content) != null)
                         {
-                            varPointer.putField(new FieldInfo(token.content, clazz.name()));
+                            varPointer.pushField(new FieldInfo(token.content, clazz.name(), varName2Type.get(token.content))); // FIXME: Use something else than varName2Type, this code relies on a glitch
                             insnList.add(new NSFieldInsn(FIELD_LOAD, clazz.name(), token.content));
                             typeStack.add(NSTypes.OBJECT_TYPE);
                         }
                         else
                         {
-                            varPointer.putVariable(vindex);
+                            varPointer.pushVariable(vindex);
                             insnList.add(new NSVarInsn(VAR_LOAD, vindex));
                             typeStack.push(varName2Type.get(token.content));
                         }
@@ -701,9 +701,28 @@ public class NSCompiler implements NSOps
                         FunctionCallInsn callInsn = (FunctionCallInsn) previous;
                         callInsn.functionOwner(FunctionCallInsn.PREVIOUS);
                     }
-                    else if(previous.getOpcode() == VAR_LOAD)
+                    else if(previous.getOpcode() == VAR_LOAD) // VAR_LOAD -1 if everything's okay
                     {
-                        insnList.set(insnList.size() - 1, new LoadFieldInsn(tokenList.get(tokenIndex - 1).content));
+                        String id = "Object";
+                        varPointer.popValue(); // We remove the invalid variable on top of the variable stack
+                        if(varPointer.isVar())
+                        {
+                            if(varPointer.peekVarId() == -1)
+                            {
+                                throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                            }
+                            id = varName2Type.get(nameOf(varPointer.peekVarId())).getID();
+                        }
+                        else
+                        {
+                            if(varPointer.peekField() == null)
+                            {
+                                throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                            }
+                            id = varPointer.peekField().type().getID();
+                        }
+                        insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, tokenList.get(tokenIndex - 1).content));
+                        System.err.println("{{{ content = " + tokenList.get(tokenIndex - 1).content + " ; id = " + id);
                         typeStack.pop();
                     }
                 }
@@ -711,30 +730,30 @@ public class NSCompiler implements NSOps
                 {
                     if(varPointer.isVar())
                     {
-                        if(varPointer.asVarId() == -1)
+                        if(varPointer.peekVarId() == -1)
                         {
                             throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
                         }
                         else
                         {
-                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.asVarId()));
+                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
                             typeStack.pop();
                         }
-                        varPointer.putVariable(-1);
+                        varPointer.popValue();
                     }
                     else if(varPointer.isField())
                     {
-                        if(varPointer.asField() == null)
+                        if(varPointer.peekField() == null)
                         {
                             throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
                         }
                         else
                         {
-                            FieldInfo infos = varPointer.asField();
+                            FieldInfo infos = varPointer.peekField();
                             insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
                             typeStack.pop();
                         }
-                        varPointer.putField(null);
+                        varPointer.popValue();
                     }
                     else
                         throwCompilerException("Tried to assign a value to an object that is not a variable.");
@@ -743,7 +762,7 @@ public class NSCompiler implements NSOps
                 {
                     if(varPointer.isVar())
                     {
-                        if(varPointer.asVarId() == -1)
+                        if(varPointer.peekVarId() == -1)
                         {
                             throwCompilerException("Invalid argument for operator ++/--");
                         }
@@ -751,13 +770,14 @@ public class NSCompiler implements NSOps
                         {
                             insnList.add(new NSLoadIntInsn(1));
                             insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
-                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.asVarId()));
-                            insnList.add(new NSVarInsn(VAR_LOAD, varPointer.asVarId()));
+                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
+                            insnList.add(new NSVarInsn(VAR_LOAD, varPointer.peekVarId()));
                         }
+                        varPointer.popValue();
                     }
                     else if(varPointer.isField())
                     {
-                        if(varPointer.asField() == null)
+                        if(varPointer.peekField() == null)
                         {
                             throwCompilerException("Invalid argument for operator ++/--");
                         }
@@ -765,10 +785,11 @@ public class NSCompiler implements NSOps
                         {
                             insnList.add(new NSLoadIntInsn(1));
                             insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
-                            FieldInfo infos = varPointer.asField();
+                            FieldInfo infos = varPointer.peekField();
                             insnList.add(new NSFieldInsn(FIELD_LOAD, infos.owner(), infos.name()));
                             insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
                         }
+                        varPointer.popValue();
                     }
                 }
                 else
@@ -942,7 +963,7 @@ public class NSCompiler implements NSOps
 
                         // Start of creating the field
                         clazz.field(type, nameToken.content);
-                        varPointer.putField(new FieldInfo(nameToken.content, clazz.name()));
+                        varPointer.pushField(new FieldInfo(nameToken.content, clazz.name(), type));
                         break;
 
                     default:
@@ -954,6 +975,12 @@ public class NSCompiler implements NSOps
             default:
                 break;
         }
+    }
+
+    private String nameOf(int asVarId)
+    {
+        // TODO: implement
+        return null;
     }
 
     private String removeName(int oldId)

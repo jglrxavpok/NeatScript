@@ -25,6 +25,21 @@ public class NSClass
         superclass("Object");
     }
 
+    public List<NSField> fields()
+    {
+        return fields;
+    }
+
+    public boolean hasField(String name)
+    {
+        for(NSField field : fields)
+        {
+            if(field.name().equals(name))
+                return true;
+        }
+        return false;
+    }
+
     public String superclass()
     {
         return superclass;
@@ -107,6 +122,7 @@ public class NSClass
             if(f.name().equals(name))
                 return f;
         }
+        System.out.println("No field " + name + " in " + this);
         return null;
     }
 
@@ -119,5 +135,33 @@ public class NSClass
     {
         fields.add(field);
         return this;
+    }
+
+    public boolean hasMethod(String methodName, List<NSType> types)
+    {
+        methodSearch: for(NSAbstractMethod method : methodsDef)
+        {
+            if(method.name().equals(methodName))
+            {
+                if(types.size() != method.types().size())
+                {
+                    continue;
+                }
+                for(int i = 0; i < types.size(); i++ )
+                {
+                    if(!types.get(i).getID().equals(method.types().get(i).getID()))
+                    {
+                        continue methodSearch;
+                    }
+                }
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public NSObject init(NSObject object)
+    {
+        return object;
     }
 }

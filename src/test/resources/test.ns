@@ -28,7 +28,7 @@ end
 "End of program!";
 print(prettify("TEST PRETTIFY"));
 print(prettify("Second prettify"));
-print(prettify("lol"));
+print(prettify("lol"+0));
 
 function prettify(String txt) 
 {

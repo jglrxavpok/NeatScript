@@ -4,8 +4,6 @@ import java.io.*;
 import java.util.*;
 
 import org.jglr.ns.*;
-import org.jglr.ns.funcs.*;
-import org.jglr.ns.types.*;
 
 public class BaseClassLoader extends NSClassLoader
 {
@@ -18,60 +16,39 @@ public class BaseClassLoader extends NSClassLoader
         classes = new HashMap<>();
     }
 
+    BaseClassLoader addNativeClass(NSNativeClass nat)
+    {
+        classes.put(nat.name(), nat);
+        return this;
+    }
+
     @Override
     public NSClass loadClass(String className) throws NSClassNotFoundException
     {
         if(classes.containsKey(className))
             return classes.get(className);
-        if(className.equals(NSTypes.STRING_TYPE.getID()))
+        System.out.println("Loading " + className);
+        InputStream input = BaseClassLoader.class.getResourceAsStream("/" + className + ".nsc");
+        byte[] buffer = new byte[65565];
+        int n;
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try
         {
-            NSNativeClass clazz = new NSNativeClass(NSTypes.STRING_TYPE.getID());
-            NSNativeFunc lengthFunc = new NSNativeFunc("length")
+            while((n = input.read(buffer, 0, buffer.length)) != -1)
             {
-
-                @Override
-                public void run(Stack<NSObject> vars)
-                {
-                    NSObject object = vars.pop();
-                    if(object.type().isCastable(NSTypes.STRING_TYPE))
-                    {
-                        String str = (String) object.type().cast(object.value(), NSTypes.STRING_TYPE);
-                        vars.push(new NSObject(NSTypes.STRING_TYPE, str.length() + "")); // TODO: Replace String type by Int type
-                    }
-                    else
-                        throw new RuntimeException(object.type().getID() + " cannot be casted to a String");
-                }
-
-            };
-            clazz.methods().add(lengthFunc);
-            lengthFunc.types().add(NSTypes.STRING_TYPE);
-            lengthFunc.paramNames().add("string");
+                baos.write(buffer, 0, n);
+            }
+            baos.flush();
+            baos.close();
+            NSClass clazz = classParser().parseClass(baos.toByteArray());
+            classes.put(className, clazz);
+            if(!clazz.superclass().equals("Object"))
+                vm().getOrLoad(className);
             return clazz;
         }
-        else
+        catch(IOException e)
         {
-            InputStream input = BaseClassLoader.class.getResourceAsStream(className + ".nsc");
-            byte[] buffer = new byte[65565];
-            int n;
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try
-            {
-                while((n = input.read(buffer, 0, buffer.length)) != -1)
-                {
-                    baos.write(buffer, 0, n);
-                }
-                baos.flush();
-                baos.close();
-                NSClass clazz = classParser().parseClass(baos.toByteArray());
-                classes.put(className, clazz);
-                if(!clazz.superclass().equals("Object"))
-                    vm().getOrLoad(className);
-                return clazz;
-            }
-            catch(IOException e)
-            {
-                e.printStackTrace();
-            }
+            e.printStackTrace();
         }
         return null;
     }

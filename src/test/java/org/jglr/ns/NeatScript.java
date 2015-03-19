@@ -13,7 +13,12 @@ public class NeatScript implements NSOps, NSTypes
     public void testCompile() throws NSCompilerException, IOException, NSClassNotFoundException, NSNoSuchMethodException, NSVirtualMachineException
     {
         NSSourceFile source = new NSSourceFile("TestClass.ns", NeatScript.class.getResourceAsStream("/test.ns"));
-        NSClass clazz = new NSCompiler().compile(source);
+
+        //  NSSourceFile source2 = new NSSourceFile("SecondTest.ns", NeatScript.class.getResourceAsStream("/test2.ns"));
+        NSCompiler compiler = new NSCompiler();
+        NSClass clazz = compiler.compile(source);
+        //    NSClass clazz2 = compiler.compile(source2);
+
         NSClassWriter writer = new NSClassWriter();
         byte[] rawBytecode = writer.writeClass(clazz);
         FileOutputStream out = new FileOutputStream(new File(".", "TestClass.nsc"));
@@ -21,9 +26,15 @@ public class NeatScript implements NSOps, NSTypes
         out.flush();
         out.close();
 
+        //        rawBytecode = writer.writeClass(clazz2);
+        //        out = new FileOutputStream(new File(".", "SecondTest.nsc"));
+        //        out.write(rawBytecode);
+        //        out.flush();
+        //        out.close();
+
         Assert.assertTrue("Compilation failed", clazz != null);
         NSVirtualMachine vm = new NSVirtualMachine();
-        vm.entryPoint(clazz);
-        vm.launch();
+        //        vm.addClass(clazz2);
+        vm.entryPoint(clazz).launch();
     }
 }

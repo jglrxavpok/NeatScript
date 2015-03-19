@@ -35,6 +35,11 @@ public class NSObject
             type.init(this);
     }
 
+    public Collection<String> fieldNames()
+    {
+        return fields.keySet();
+    }
+
     public NSType type()
     {
         return type;
@@ -43,6 +48,7 @@ public class NSObject
     public NSObject value(Object object)
     {
         this.object = object;
+        type.init(this);
         return this;
     }
 

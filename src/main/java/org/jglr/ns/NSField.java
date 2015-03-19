@@ -10,4 +10,8 @@ public class NSField extends NSVariable
         super(type, name, -42);
     }
 
+    public String toString()
+    {
+        return type().getID() + " " + name();
+    }
 }

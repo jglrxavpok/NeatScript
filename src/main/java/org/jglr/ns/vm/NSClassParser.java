@@ -119,10 +119,6 @@ public class NSClassParser
                     insns.add(new NSVarInsn(opcode, 0).read(vm, in));
                     break;
 
-                case NSOps.GET_FIELD:
-                    insns.add(new LoadFieldInsn(opcode, "").read(vm, in));
-                    break;
-
                 case NSOps.POP:
                     insns.add(new NSBaseInsn(opcode).read(vm, in));
                     break;

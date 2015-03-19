@@ -19,7 +19,7 @@ public class NSInterpreter implements NSOps, NSTypes
         NSOps.initAllNames();
     }
 
-    public NSObject interpret(List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
+    public NSObject interpret(NSClass currentClass, List<NSInsn> insns, NSVariable... startVariables) throws NSNoSuchMethodException, NSClassNotFoundException, NSVirtualMachineException
     {
         int index = 0;
         Stack<NSObject> heapStack = new Stack<>();
@@ -114,7 +114,16 @@ public class NSInterpreter implements NSOps, NSTypes
                     variables.put(variable.varIndex(), variable);
                 }
                 else
-                    throwRuntimeException("Variable name " + variable.name() + " already exists", lineNumber, index, insn);
+                {
+                    try
+                    {
+                        throwRuntimeException("Variable name " + variable.name() + " already exists", lineNumber, index, insn);
+                    }
+                    catch(Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+                }
             }
             else if(insn.getOpcode() == VAR_LOAD)
             {
@@ -154,10 +163,10 @@ public class NSInterpreter implements NSOps, NSTypes
             else if(insn.getOpcode() == GET_FIELD)
             {
                 NSObject var = valuesStack.pop();
-                NSObject field = var.field(((LoadFieldInsn) insn).fieldName());
+                NSObject field = var.field(((NSFieldInsn) insn).name());
                 if(field == null)
                 {
-                    throwRuntimeException("Unknown field: " + ((LoadFieldInsn) insn).fieldName() + " in type " + var.type().getID(), lineNumber, index, insn);
+                    throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).name() + " in type " + var.type().getID(), lineNumber, index, insn);
                 }
                 else
                     valuesStack.push(field);

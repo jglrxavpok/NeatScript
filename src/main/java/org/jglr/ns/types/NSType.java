@@ -4,6 +4,7 @@ import java.util.*;
 
 import org.jglr.ns.*;
 import org.jglr.ns.funcs.*;
+import org.jglr.ns.vm.*;
 
 public abstract class NSType
 {
@@ -80,13 +81,25 @@ public abstract class NSType
         }
         if(supertype != null)
             return supertype.operation(a, b, operator);
-        return null;
+        throw new UnsupportedOperationException(a.type().getID() + " " + operator.toString() + " " + b.type().getID());
     }
 
     public NSType init(NSObject object)
     {
         if(supertype != null)
             supertype.init(object);
+        try
+        {
+            if(NSVirtualMachine.instance() != null)
+            {
+                NSClass clazz = NSVirtualMachine.instance().getOrLoad(id);
+                clazz.init(object);
+            }
+        }
+        catch(NSClassNotFoundException e)
+        {
+            e.printStackTrace();
+        }
         return this;
     }
 

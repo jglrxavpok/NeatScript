@@ -20,7 +20,7 @@ public class NSStringType extends NSType
                 NSObject object = vars.pop();
                 String str = (String) object.value();
                 int length = str.length();
-                vars.push(new NSObject(NSTypes.STRING_TYPE, "" + length));
+                vars.push(new NSObject(NSTypes.INT_TYPE, length));
             }
         });
     }
@@ -63,7 +63,13 @@ public class NSStringType extends NSType
 
     public NSType init(NSObject object)
     {
-        object.field("size", new NSObject(this, false).value(((String) object.value()).length()));
+        //        if(object.value() == null)
+        //        {
+        //            object.field("size", new NSObject(NSTypes.INT_TYPE, 0));
+        //            return this;
+        //        }
+        //        object.field("size", new NSObject(NSTypes.INT_TYPE, ((String) object.value()).length()));
+        super.init(object);
         return this;
     }
 
