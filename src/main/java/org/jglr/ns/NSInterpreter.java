@@ -115,14 +115,7 @@ public class NSInterpreter implements NSOps, NSTypes
                 }
                 else
                 {
-                    try
-                    {
-                        throwRuntimeException("Variable name " + variable.name() + " already exists", lineNumber, index, insn);
-                    }
-                    catch(Exception e)
-                    {
-                        e.printStackTrace();
-                    }
+                    throwRuntimeException("Variable name " + variable.name() + " already exists", lineNumber, index, insn);
                 }
             }
             else if(insn.getOpcode() == VAR_LOAD)

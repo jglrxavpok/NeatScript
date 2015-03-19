@@ -45,6 +45,7 @@ public class NSCompiler implements NSOps
         states = new Stack<>();
         loopStartStack = new Stack<>();
         rootMethod = currentMethodDef = (NSFuncDef) new NSFuncDef().name(NSFuncDef.ROOT_ID);
+        varId = 1; // We start at 1 because 0 represents 'self'
     }
 
     public NSClass compile(String name, String source) throws NSCompilerException, IOException
@@ -916,7 +917,7 @@ public class NSCompiler implements NSOps
                         {
                             //                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
                             inFunctionDef = false;
-                            varId = 0;
+                            varId = 1;
                             varName2Id.clear(); // TODO: Might need to push it before clearing it to save root method variables
                             for(int i = 0; i < currentMethodDef.paramNames().size(); i++ )
                             {
@@ -1070,7 +1071,7 @@ public class NSCompiler implements NSOps
         states.push(new CompilerState(varName2Id, varName2Type, varId, labelBase, labelID, currentMethodDef));
         varName2Id.clear();
         varName2Type.clear();
-        varId = 0;
+        varId = 1;
         labelBase = "L";
         labelID = 0;
     }
