@@ -1,15 +1,12 @@
 package org.jglr.ns;
 
-public class NSCompilerException extends Exception
-{
+public class NSCompilerException extends Exception {
 
-    public NSCompilerException(String message)
-    {
+    public NSCompilerException(String message) {
         super(message);
     }
 
-    public NSCompilerException(String message, Exception e)
-    {
+    public NSCompilerException(String message, Exception e) {
         super(message, e);
     }
 

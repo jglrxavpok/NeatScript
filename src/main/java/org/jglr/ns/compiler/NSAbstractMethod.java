@@ -5,49 +5,41 @@ import java.util.*;
 import org.jglr.ns.*;
 import org.jglr.ns.types.*;
 
-public abstract class NSAbstractMethod
-{
-    private String       name;
+public abstract class NSAbstractMethod {
+    private String name;
     private List<NSType> types;
     private List<String> paramNames;
-    private String       owner;
+    private String owner;
 
-    public NSAbstractMethod()
-    {
+    public NSAbstractMethod() {
         types = new ArrayList<>();
         paramNames = new ArrayList<>();
     }
 
-    public NSAbstractMethod name(String name)
-    {
+    public NSAbstractMethod name(String name) {
         this.name = name;
         return this;
     }
 
     public abstract void run(Stack<NSObject> vars);
 
-    public List<String> paramNames()
-    {
+    public List<String> paramNames() {
         return paramNames;
     }
 
-    public String name()
-    {
+    public String name() {
         return name;
     }
 
-    public List<NSType> types()
-    {
+    public List<NSType> types() {
         return types;
     }
 
-    public String toString()
-    {
+    public String toString() {
         StringBuffer buffer = new StringBuffer();
         buffer.append(name());
         buffer.append('(');
-        for(int i = 0; i < types().size(); i++ )
-        {
+        for (int i = 0; i < types().size(); i++) {
             buffer.append(types().get(i).getID());
             buffer.append(" ");
             buffer.append(paramNames().get(i));
@@ -56,14 +48,12 @@ public abstract class NSAbstractMethod
         return buffer.toString();
     }
 
-    public NSAbstractMethod owner(String owner)
-    {
+    public NSAbstractMethod owner(String owner) {
         this.owner = owner;
         return this;
     }
 
-    public String owner()
-    {
+    public String owner() {
         return owner;
     }
 }

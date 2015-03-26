@@ -1,30 +1,24 @@
 package org.jglr.ns.vm;
 
-public class NSVirtualMachineException extends Exception
-{
+public class NSVirtualMachineException extends Exception {
 
     private static final long serialVersionUID = -4946128697946105886L;
 
-    public NSVirtualMachineException(String message)
-    {
+    public NSVirtualMachineException(String message) {
         super(message);
     }
 
-    public NSVirtualMachineException(String message, StackTraceElement[] e, boolean newException)
-    {
+    public NSVirtualMachineException(String message, StackTraceElement[] e, boolean newException) {
         super(message);
-        if(newException)
-        {
+        if (newException) {
             Exception exception = new Exception("NeatScript exception");
             exception.setStackTrace(e);
             this.initCause(exception);
-        }
-        else
+        } else
             setStackTrace(e);
     }
 
-    public NSVirtualMachineException(String message, StackTraceElement[] generatedStackTrace, Exception e)
-    {
+    public NSVirtualMachineException(String message, StackTraceElement[] generatedStackTrace, Exception e) {
         super(message, e);
         setStackTrace(generatedStackTrace);
     }

@@ -2,11 +2,9 @@ package org.jglr.ns.nativeclasses;
 
 import org.jglr.ns.vm.*;
 
-public class NSIntClass extends NSNativeClass
-{
+public class NSIntClass extends NSNativeClass {
 
-    public NSIntClass()
-    {
+    public NSIntClass() {
         super("Int");
     }
 

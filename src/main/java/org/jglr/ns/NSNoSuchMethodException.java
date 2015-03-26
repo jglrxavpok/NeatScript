@@ -4,21 +4,17 @@ import java.util.*;
 
 import org.jglr.ns.types.*;
 
-public class NSNoSuchMethodException extends Exception
-{
+public class NSNoSuchMethodException extends Exception {
 
-    public NSNoSuchMethodException(String className, String methodName, List<NSType> types)
-    {
+    public NSNoSuchMethodException(String className, String methodName, List<NSType> types) {
         super(createMessage(className, methodName, types));
     }
 
-    public NSNoSuchMethodException(String className, String methodName, List<NSType> types, Throwable t)
-    {
+    public NSNoSuchMethodException(String className, String methodName, List<NSType> types, Throwable t) {
         super(createMessage(className, methodName, types), t);
     }
 
-    private static String createMessage(String className, String methodName, List<NSType> types)
-    {
+    private static String createMessage(String className, String methodName, List<NSType> types) {
         StringBuffer buffer = new StringBuffer();
         buffer.append("Method not found: ");
         buffer.append(className);
@@ -26,9 +22,8 @@ public class NSNoSuchMethodException extends Exception
         buffer.append(methodName);
         buffer.append("(");
         int index = 0;
-        for(NSType type : types)
-        {
-            if(index++ != 0)
+        for (NSType type : types) {
+            if (index++ != 0)
                 buffer.append(",");
             buffer.append(type.getID());
         }

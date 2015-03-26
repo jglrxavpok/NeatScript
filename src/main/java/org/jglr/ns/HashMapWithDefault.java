@@ -2,32 +2,27 @@ package org.jglr.ns;
 
 import java.util.*;
 
-public class HashMapWithDefault<K, V> extends HashMap<K, V>
-{
+public class HashMapWithDefault<K, V> extends HashMap<K, V> {
 
     private static final long serialVersionUID = 5995791692010816132L;
-    private V                 defaultValue;
+    private V defaultValue;
 
-    public void setDefault(V value)
-    {
+    public void setDefault(V value) {
         defaultValue = value;
     }
 
-    public V getDefault()
-    {
+    public V getDefault() {
         return defaultValue;
     }
 
-    public V get(Object key)
-    {
-        if(this.containsKey(key))
+    public V get(Object key) {
+        if (this.containsKey(key))
             return super.get(key);
         else
             return defaultValue;
     }
 
-    public Object clone()
-    {
+    public Object clone() {
         HashMapWithDefault<K, V> clone = new HashMapWithDefault<>();
         clone.setDefault(defaultValue);
         clone.putAll(this);

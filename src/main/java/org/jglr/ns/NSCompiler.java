@@ -9,32 +9,30 @@ import org.jglr.ns.compiler.VariablePointer.VariablePointerMode;
 import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
 
-public class NSCompiler implements NSOps
-{
+public class NSCompiler implements NSOps {
 
-    private int                      index;
-    private String                   source;
-    private int                      line;
-    private int                      labelID;
-    private String                   labelBase;
-    private NSType                   pendingType;
-    private int                      varId;
-    private int                      currentVariable;
-    private VariablePointer          varPointer;
+    private int index;
+    private String source;
+    private int line;
+    private int labelID;
+    private String labelBase;
+    private NSType pendingType;
+    private int varId;
+    private int currentVariable;
+    private VariablePointer varPointer;
     private HashMap<String, Integer> varName2Id;
-    private String                   namespace;        // FIXME: USE ME PLZ
-    private NSFuncDef                currentMethodDef;
-    private boolean                  inFunctionDef;
-    private NSFuncDef                rootMethod;
-    private NSClass                  clazz;
-    private Stack<NSType>            typeStack;
-    private HashMap<String, NSType>  varName2Type;
-    private Stack<CompilerState>     states;
+    private String namespace; // FIXME: USE ME PLZ
+    private NSFuncDef currentMethodDef;
+    private boolean inFunctionDef;
+    private NSFuncDef rootMethod;
+    private NSClass clazz;
+    private Stack<NSType> typeStack;
+    private HashMap<String, NSType> varName2Type;
+    private Stack<CompilerState> states;
     private Stack<LoopStartingPoint> loopStartStack;
-    private boolean                  inComment = false;
+    private boolean inComment = false;
 
-    public NSCompiler()
-    {
+    public NSCompiler() {
         NSOps.initAllNames();
         varPointer = new VariablePointer();
         varPointer.pushMode(VariablePointerMode.VARIABLE);
@@ -48,13 +46,11 @@ public class NSCompiler implements NSOps
         varId = 1; // We start at 1 because 0 represents 'self'
     }
 
-    public NSClass compile(String name, String source) throws NSCompilerException, IOException
-    {
+    public NSClass compile(String name, String source) throws NSCompilerException, IOException {
         return compile(new NSSourceFile(name, new ByteArrayInputStream(source.getBytes())));
     }
 
-    public NSClass compile(NSSourceFile source) throws NSCompilerException, IOException
-    {
+    public NSClass compile(NSSourceFile source) throws NSCompilerException, IOException {
         this.clazz = new NSClass(source.name().substring(0, source.name().indexOf("."))).sourceFile(source.name());
         clazz.rootMethod(rootMethod.owner(clazz.name()));
         this.source = source.content();
@@ -64,78 +60,55 @@ public class NSCompiler implements NSOps
         ArrayList<NSCodeToken> tokenList = new ArrayList<NSCodeToken>();
         List<NSInsn> finalInstructions = null;
         int lineNumber = 1;
-        while((nSCodeToken = nextToken()) != null)
-        {
+        while ((nSCodeToken = nextToken()) != null) {
             finalInstructions = currentMethodDef.instructions();
-            if(finalInstructions.isEmpty())
+            if (finalInstructions.isEmpty())
                 finalInstructions.add(new LineNumberInsn(1));
 
-            if(nSCodeToken.type == NSTokenType.NEW_LINE)
-            {
-                finalInstructions.add(new LineNumberInsn( ++lineNumber));
-            }
-            else if(nSCodeToken.type == NSTokenType.KEYWORD && nSCodeToken.content.equals(NSKeywords.COMMENT_START.raw()))
-            {
+            if (nSCodeToken.type == NSTokenType.NEW_LINE) {
+                finalInstructions.add(new LineNumberInsn(++lineNumber));
+            } else if (nSCodeToken.type == NSTokenType.KEYWORD && nSCodeToken.content.equals(NSKeywords.COMMENT_START.raw())) {
                 inComment = true;
                 System.out.println(">>>> COMMENT");
-            }
-            else if(!inComment)
-            {
-                if(nSCodeToken.createsNewLabel())
-                {
-                    if(nSCodeToken.type != NSTokenType.INSTRUCTION_END)
+            } else if (!inComment) {
+                if (nSCodeToken.createsNewLabel()) {
+                    if (nSCodeToken.type != NSTokenType.INSTRUCTION_END)
                         tokenList.add(nSCodeToken);
                     makeInstructions(tokenList, finalInstructions);
-                    if(!tokenList.isEmpty())
-                    {
+                    if (!tokenList.isEmpty()) {
                         throwCompilerException("Missing semicolon.");
                     }
-                }
-                else
+                } else
                     tokenList.add(nSCodeToken);
             }
         }
-        if(!tokenList.isEmpty())
-        {
+        if (!tokenList.isEmpty()) {
             throwCompilerError("Instruction stack isn't empty. Problem while reading the source code.");
         }
         // We analyse the function calls to find if the owner is this class or another
-        for(NSAbstractMethod m : clazz.methods())
-        {
-            if(m instanceof NSFuncDef)
-            {
+        for (NSAbstractMethod m : clazz.methods()) {
+            if (m instanceof NSFuncDef) {
                 NSFuncDef method = (NSFuncDef) m;
-                for(NSInsn insn : method.instructions())
-                {
-                    if(insn.getOpcode() == FUNCTION_CALL)
-                    {
+                for (NSInsn insn : method.instructions()) {
+                    if (insn.getOpcode() == FUNCTION_CALL) {
                         FunctionCallInsn callInsn = (FunctionCallInsn) insn;
                         NSAbstractMethod calledMethod = null;
-                        try
-                        {
+                        try {
                             calledMethod = clazz.method(callInsn.functionName(), callInsn.types());
-                        }
-                        catch(Exception e)
-                        {
+                        } catch (Exception e) {
                             ; // We ignore this exception as there's one only if the method doesn't exist
                         }
 
-                        if(calledMethod != null)
-                        {
+                        if (calledMethod != null) {
                             callInsn.functionOwner(clazz.name());
-                        }
-                        else
-                        {
+                        } else {
                             // TODO: Imports maybe ?
                             callInsn.functionOwner("std");
-                            if(!callInsn.types().isEmpty())
-                            {
+                            if (!callInsn.types().isEmpty()) {
                                 NSType type = callInsn.types().get(0);
-                                if(type.functions().containsKey(callInsn.functionName()))
-                                {
+                                if (type.functions().containsKey(callInsn.functionName())) {
                                     callInsn.functionOwner(type.getID());
-                                }
-                                else
+                                } else
                                     ; // TODO: Check for user-defined types
                             }
                         }
@@ -146,45 +119,33 @@ public class NSCompiler implements NSOps
         return clazz;
     }
 
-    private NSCodeToken nextToken() throws NSCompilerException
-    {
-        try
-        {
+    private NSCodeToken nextToken() throws NSCompilerException {
+        try {
             char[] chars = source.toCharArray();
             StringBuffer buffer = new StringBuffer();
             boolean inString = false;
             boolean inNumber = false;
             NSTokenType type = null;
-            for(; index < chars.length; index++ )
-            {
+            for (; index < chars.length; index++) {
                 boolean append = true;
                 boolean breakAfter = false;
                 NSCodeToken op = null;
-                if(chars[index] == '\"')
-                {
+                if (chars[index] == '\"') {
                     inString = !inString;
                     append = false;
-                    if(!inString)
-                    {
+                    if (!inString) {
                         breakAfter = true;
                         type = NSTokenType.STRING;
                     }
-                }
-                else if(!inString && (chars[index] == '\n' || chars[index] == '\r'))
-                {
-                    if(!buffer.toString().isEmpty())
-                    {
-                        for(NSKeywords keyword : NSKeywords.values())
-                        {
-                            if(keyword.raw().equals(buffer.toString()))
-                            {
+                } else if (!inString && (chars[index] == '\n' || chars[index] == '\r')) {
+                    if (!buffer.toString().isEmpty()) {
+                        for (NSKeywords keyword : NSKeywords.values()) {
+                            if (keyword.raw().equals(buffer.toString())) {
                                 return new KeywordToken(keyword);
                             }
                         }
-                        for(NSOperator operator : NSOperator.values())
-                        {
-                            if(operator.toString().equals(buffer.toString()))
-                            {
+                        for (NSOperator operator : NSOperator.values()) {
+                            if (operator.toString().equals(buffer.toString())) {
                                 index += operator.toString().length(); // We offset the index by the length of the operator
                                 return new OperatorToken(operator);
                             }
@@ -192,150 +153,105 @@ public class NSCompiler implements NSOps
 
                         return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                     }
-                    index++ ;
-                    line++ ;
+                    index++;
+                    line++;
                     inComment = false;
                     return new NSCodeToken("", NSTokenType.NEW_LINE);
-                }
-                else if(!inString && !inComment)
-                {
-                    if(chars[index] >= '0' && chars[index] <= '9')
-                    {
-                        if(buffer.toString().isEmpty())
+                } else if (!inString && !inComment) {
+                    if (chars[index] >= '0' && chars[index] <= '9') {
+                        if (buffer.toString().isEmpty())
                             inNumber = true;
-                    }
-                    else if(!(chars[index] == '.' && inNumber) && (op = getOperator(buffer, chars)) != null)
-                    {
+                    } else if (!(chars[index] == '.' && inNumber) && (op = getOperator(buffer, chars)) != null) {
                         return op;
-                    }
-                    else if(chars[index] == ' ')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
+                    } else if (chars[index] == ' ') {
+                        if (!buffer.toString().isEmpty()) {
+                            for (NSKeywords keyword : NSKeywords.values()) {
+                                if (keyword.raw().equals(buffer.toString())) {
                                     return new KeywordToken(keyword);
                                 }
                             }
-                            for(NSOperator operator : NSOperator.values())
-                            {
-                                if(operator.toString().equals(buffer.toString()))
-                                {
+                            for (NSOperator operator : NSOperator.values()) {
+                                if (operator.toString().equals(buffer.toString())) {
                                     index += operator.toString().length(); // We offset the index by the length of the operator
                                     return new OperatorToken(operator);
                                 }
                             }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                         }
-                        index++ ;
+                        index++;
                         return nextToken();
-                    }
-                    else if(chars[index] == '\t')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
+                    } else if (chars[index] == '\t') {
+                        if (!buffer.toString().isEmpty()) {
+                            for (NSKeywords keyword : NSKeywords.values()) {
+                                if (keyword.raw().equals(buffer.toString())) {
                                     return new KeywordToken(keyword);
                                 }
                             }
-                            for(NSOperator operator : NSOperator.values())
-                            {
-                                if(operator.toString().equals(buffer.toString()))
-                                {
+                            for (NSOperator operator : NSOperator.values()) {
+                                if (operator.toString().equals(buffer.toString())) {
                                     index += operator.toString().length(); // We offset the index by the length of the operator
                                     return new OperatorToken(operator);
                                 }
                             }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                         }
-                        index++ ;
+                        index++;
                         return nextToken();
-                    }
-                    else if(chars[index] == ',')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
+                    } else if (chars[index] == ',') {
+                        if (!buffer.toString().isEmpty()) {
+                            for (NSKeywords keyword : NSKeywords.values()) {
+                                if (keyword.raw().equals(buffer.toString())) {
                                     return new KeywordToken(keyword);
                                 }
                             }
-                            for(NSOperator operator : NSOperator.values())
-                            {
-                                if(operator.toString().equals(buffer.toString()))
-                                {
+                            for (NSOperator operator : NSOperator.values()) {
+                                if (operator.toString().equals(buffer.toString())) {
                                     index += operator.toString().length(); // We offset the index by the length of the operator
                                     return new OperatorToken(operator);
                                 }
                             }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                         }
-                        index++ ;
+                        index++;
                         return nextToken();
-                    }
-                    else if(chars[index] == '(')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
+                    } else if (chars[index] == '(') {
+                        if (!buffer.toString().isEmpty()) {
+                            for (NSKeywords keyword : NSKeywords.values()) {
+                                if (keyword.raw().equals(buffer.toString())) {
                                     return new KeywordToken(keyword);
                                 }
                             }
                         }
-                        for(NSOperator operator : NSOperator.values())
-                        {
-                            if(operator.toString().equals(buffer.toString()))
-                            {
+                        for (NSOperator operator : NSOperator.values()) {
+                            if (operator.toString().equals(buffer.toString())) {
                                 index += operator.toString().length(); // We offset the index by the length of the operator
                                 return new OperatorToken(operator);
                             }
                         }
-                        index++ ;
+                        index++;
                         return new NSCodeToken(buffer.toString(), NSTokenType.OPEN_PARENTHESIS);
-                    }
-                    else if(chars[index] == ')')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
+                    } else if (chars[index] == ')') {
+                        if (!buffer.toString().isEmpty()) {
+                            for (NSKeywords keyword : NSKeywords.values()) {
+                                if (keyword.raw().equals(buffer.toString())) {
                                     return new KeywordToken(keyword);
                                 }
                             }
                             return new NSCodeToken(buffer.toString(), NSTokenType.WORD);
                         }
-                        for(NSOperator operator : NSOperator.values())
-                        {
-                            if(operator.toString().equals(buffer.toString()))
-                            {
+                        for (NSOperator operator : NSOperator.values()) {
+                            if (operator.toString().equals(buffer.toString())) {
                                 index += operator.toString().length(); // We offset the index by the length of the operator
                                 return new OperatorToken(operator);
                             }
                         }
 
-                        index++ ;
+                        index++;
                         return new NSCodeToken("", NSTokenType.CLOSE_PARENTHESIS);
-                    }
-                    else if(chars[index] == ';')
-                    {
-                        if(!buffer.toString().isEmpty())
-                        {
-                            for(NSKeywords keyword : NSKeywords.values())
-                            {
-                                if(keyword.raw().equals(buffer.toString()))
-                                {
+                    } else if (chars[index] == ';') {
+                        if (!buffer.toString().isEmpty()) {
+                            for (NSKeywords keyword : NSKeywords.values()) {
+                                if (keyword.raw().equals(buffer.toString())) {
                                     return new KeywordToken(keyword);
                                 }
                             }
@@ -346,92 +262,72 @@ public class NSCompiler implements NSOps
                     }
                 }
 
-                if(append)
-                {
+                if (append) {
                     buffer.append(chars[index]);
                 }
-                if(breakAfter)
-                {
-                    index++ ;
+                if (breakAfter) {
+                    index++;
                     break;
                 }
             }
-            if(index >= chars.length - 1 && buffer.length() == 0 && type == null)
+            if (index >= chars.length - 1 && buffer.length() == 0 && type == null)
                 return null;
-            if(type == null)
-            {
-                if(inString)
-                {
+            if (type == null) {
+                if (inString) {
                     throwCompilerException("Missing end of string : \"" + buffer.toString() + "\"");
                 }
-                if(!buffer.toString().isEmpty())
-                    for(NSKeywords keyword : NSKeywords.values())
-                    {
-                        if(keyword.raw().equals(buffer.toString()))
-                        {
+                if (!buffer.toString().isEmpty())
+                    for (NSKeywords keyword : NSKeywords.values()) {
+                        if (keyword.raw().equals(buffer.toString())) {
                             return new KeywordToken(keyword);
                         }
                     }
                 throwCompilerException("Type is null. Content is \"" + buffer.toString() + "\"");
             }
             return new NSCodeToken(buffer.toString(), type);
-        }
-        catch(Exception e)
-        {
-            if(e instanceof NSCompilerException)
+        } catch (Exception e) {
+            if (e instanceof NSCompilerException)
                 throw e;
             throw new NSCompilerException("Error while compiling.", e);
         }
     }
 
-    private NSCodeToken getOperator(StringBuffer buffer, char[] chars)
-    {
+    private NSCodeToken getOperator(StringBuffer buffer, char[] chars) {
         @SuppressWarnings("unchecked")
         ArrayList<NSOperator> operators = (ArrayList<NSOperator>) NSOperator.list().clone();
         NSOperator foundOperator = null;
-        Collections.sort(operators, new Comparator<NSOperator>()
-        {
+        Collections.sort(operators, new Comparator<NSOperator>() {
 
             @Override
-            public int compare(NSOperator o1, NSOperator o2)
-            {
+            public int compare(NSOperator o1, NSOperator o2) {
                 return Integer.compare(o2.name().length(), o1.name().length()); // We want the operators from longer to shorter
             }
         });
-        if(buffer.toString().isEmpty())
-            for(NSKeywords keyword : NSKeywords.values())
-            {
-                if(source.indexOf(keyword.raw(), index) == index)
-                {
+        if (buffer.toString().isEmpty())
+            for (NSKeywords keyword : NSKeywords.values()) {
+                if (source.indexOf(keyword.raw(), index) == index) {
                     index += keyword.raw().length();
                     return new KeywordToken(keyword);
                 }
             }
-        for(NSOperator operator : operators)
-        {
-            if(source.indexOf(operator.toString(), index) == index)
-            {
-                if(foundOperator == null)
+        for (NSOperator operator : operators) {
+            if (source.indexOf(operator.toString(), index) == index) {
+                if (foundOperator == null)
                     foundOperator = operator;
-                else if(foundOperator.toString().length() < operator.toString().length())
+                else if (foundOperator.toString().length() < operator.toString().length())
                     foundOperator = operator;
             }
         }
-        if(foundOperator == null)
+        if (foundOperator == null)
             return null;
-        if(!buffer.toString().isEmpty())
-        {
-            for(NSKeywords keyword : NSKeywords.values())
-            {
-                if(keyword.raw().equals(buffer.toString()))
-                {
+        if (!buffer.toString().isEmpty()) {
+            for (NSKeywords keyword : NSKeywords.values()) {
+                if (keyword.raw().equals(buffer.toString())) {
                     return new KeywordToken(keyword);
                 }
             }
-            for(NSOperator operator : operators)
-            {
-                if(operator.toString().equals(buffer.toString()))
-                {
+            for (NSOperator operator : operators) {
+                if (operator.toString().equals(buffer.toString())) {
                     index += operator.toString().length(); // We offset the index by the length of the operator
                     return new OperatorToken(operator);
                 }
@@ -442,77 +338,51 @@ public class NSCompiler implements NSOps
         return new OperatorToken(foundOperator);
     }
 
-    public ArrayList<NSCodeToken> toRPN(List<NSCodeToken> nSCodeTokens)
-    {
+    public ArrayList<NSCodeToken> toRPN(List<NSCodeToken> nSCodeTokens) {
         ArrayList<NSCodeToken> outputQueue = new ArrayList<NSCodeToken>();
         Stack<NSCodeToken> operatorStack = new Stack<NSCodeToken>();
-        for(NSCodeToken nSCodeToken : nSCodeTokens)
-        {
-            if(nSCodeToken.type == NSTokenType.OPEN_PARENTHESIS || nSCodeToken.type == NSTokenType.KEYWORD)
-            {
+        for (NSCodeToken nSCodeToken : nSCodeTokens) {
+            if (nSCodeToken.type == NSTokenType.OPEN_PARENTHESIS || nSCodeToken.type == NSTokenType.KEYWORD) {
                 operatorStack.push(nSCodeToken);
-            }
-            else if(nSCodeToken.type == NSTokenType.CLOSE_PARENTHESIS)
-            {
-                while(!operatorStack.isEmpty())
-                {
+            } else if (nSCodeToken.type == NSTokenType.CLOSE_PARENTHESIS) {
+                while (!operatorStack.isEmpty()) {
                     NSCodeToken operator = operatorStack.pop();
-                    if(operator.type == NSTokenType.OPEN_PARENTHESIS)
-                    {
-                        if(!operator.content.isEmpty())
-                        {
+                    if (operator.type == NSTokenType.OPEN_PARENTHESIS) {
+                        if (!operator.content.isEmpty()) {
                             outputQueue.add(new NSCodeToken(operator.content, NSTokenType.FUNCTION_CALL));
                         }
                         break;
-                    }
-                    else if(operator.type == NSTokenType.KEYWORD)
-                    {
+                    } else if (operator.type == NSTokenType.KEYWORD) {
                         outputQueue.add(operator);
                         break;
-                    }
-                    else
-                    {
+                    } else {
                         outputQueue.add(operator);
                     }
                 }
-            }
-            else
-            {
-                if(isTokenOperator(nSCodeToken))
-                {
-                    while(!operatorStack.isEmpty())
-                    {
+            } else {
+                if (isTokenOperator(nSCodeToken)) {
+                    while (!operatorStack.isEmpty()) {
                         NSCodeToken operator = operatorStack.peek();
-                        if(getPrecedence(operator) >= getPrecedence(nSCodeToken))
-                        {
+                        if (getPrecedence(operator) >= getPrecedence(nSCodeToken)) {
                             outputQueue.add(operatorStack.pop());
-                        }
-                        else
-                        {
+                        } else {
                             break;
                         }
                     }
                     operatorStack.push(nSCodeToken);
-                }
-                else
-                {
+                } else {
                     outputQueue.add(nSCodeToken);
                 }
             }
         }
-        while(!operatorStack.isEmpty())
-        {
+        while (!operatorStack.isEmpty()) {
             NSCodeToken operator = operatorStack.pop();
-            if(operator.type == NSTokenType.OPEN_PARENTHESIS)
-            {
-                if(!operator.content.isEmpty())
-                {
+            if (operator.type == NSTokenType.OPEN_PARENTHESIS) {
+                if (!operator.content.isEmpty()) {
                     outputQueue.add(new NSCodeToken(operator.content, NSTokenType.FUNCTION_CALL));
                 }
                 continue;
-            }
-            else if(operator.type == NSTokenType.CLOSE_PARENTHESIS)
-            {
+            } else if (operator.type == NSTokenType.CLOSE_PARENTHESIS) {
                 continue;
             }
             outputQueue.add(operator);
@@ -520,478 +390,368 @@ public class NSCompiler implements NSOps
         return outputQueue;
     }
 
-    public boolean isTokenOperator(NSCodeToken nSCodeToken)
-    {
+    public boolean isTokenOperator(NSCodeToken nSCodeToken) {
         return (nSCodeToken.type == NSTokenType.OPERATOR && nSCodeToken instanceof OperatorToken)
                 || (nSCodeToken.type == NSTokenType.KEYWORD && nSCodeToken instanceof KeywordToken);
     }
 
-    public int getPrecedence(NSCodeToken nSCodeToken)
-    {
-        if(nSCodeToken.type == NSTokenType.OPERATOR)
-        {
+    public int getPrecedence(NSCodeToken nSCodeToken) {
+        if (nSCodeToken.type == NSTokenType.OPERATOR) {
             OperatorToken operator = (OperatorToken) nSCodeToken;
             return operator.operator().precedence();
-        }
-        else if(nSCodeToken.type == NSTokenType.KEYWORD)
-        {
+        } else if (nSCodeToken.type == NSTokenType.KEYWORD) {
             KeywordToken keyword = (KeywordToken) nSCodeToken;
             return keyword.keyword().precedence();
         }
         return 0;
     }
 
-    private void throwCompilerError(String string) throws NSCompilerError
-    {
+    private void throwCompilerError(String string) throws NSCompilerError {
         throw new NSCompilerError(string);
     }
 
-    private void throwCompilerException(String string) throws NSCompilerException
-    {
+    private void throwCompilerException(String string) throws NSCompilerException {
         throw new NSCompilerException(string + " (at line " + line + ")");
     }
 
-    private void makeInstructions(ArrayList<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
-    {
+    private void makeInstructions(ArrayList<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException {
         insnList.add(new LabelInsn(new Label(nextLabelID())));
         pendingType = null;
         typeStack = new Stack<>();
-        if(tokenList.size() == 1)
-        {
+        if (tokenList.size() == 1) {
             NSCodeToken token = tokenList.remove(tokenList.size() - 1);
-            if(token.type == NSTokenType.STRING)
-            {
+            if (token.type == NSTokenType.STRING) {
                 insnList.add(new LoadConstantInsn(token.content));
                 List<NSType> types = new ArrayList<>();
                 types.add(NSTypes.STRING_TYPE);
                 insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
-            }
-            else if(token.type == NSTokenType.WORD && !inFunctionDef)
-            {
+            } else if (token.type == NSTokenType.WORD && !inFunctionDef) {
                 int vindex = -1;
-                if(varName2Id.containsKey(token.content))
-                {
+                if (varName2Id.containsKey(token.content)) {
                     vindex = varName2Id.get(token.content);
                 }
-                if(vindex >= 0)
-                {
+                if (vindex >= 0) {
                     insnList.add(new NSVarInsn(VAR_LOAD, vindex));
                     List<NSType> types = new ArrayList<>();
                     types.add(NSTypes.STRING_TYPE);
                     insnList.add(new FunctionCallInsn("print").functionOwner("std").types(types));
-                }
-                else
-                {
+                } else {
                     throwCompilerException("Unexpected symbol: " + token.content);
                 }
-            }
-            else
-            {
+            } else {
                 handleToken(token, 0, new ArrayList<NSCodeToken>(), insnList);
             }
-        }
-        else
-        {
+        } else {
             List<NSCodeToken> rpnList = toRPN(tokenList);
             tokenList.clear();
             int index = 0;
-            for(NSCodeToken nSCodeToken : rpnList)
-            {
-                handleToken(nSCodeToken, index++ , rpnList, insnList);
+            for (NSCodeToken nSCodeToken : rpnList) {
+                handleToken(nSCodeToken, index++, rpnList, insnList);
             }
         }
     }
 
-    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, List<NSInsn> insnList) throws NSCompilerException
-    {
+    private void handleToken(NSCodeToken token, int tokenIndex, List<NSCodeToken> tokenList, List<NSInsn> insnList)
+            throws NSCompilerException {
         System.out.println(">> " + token.type.name() + " : " + token.content);
-        switch(token.type)
-        {
-            case WORD:
-            {
-                for(NSType type : NSTypes.list())
-                {
-                    if(type.getID().equals(token.content))
-                    {
-                        pendingType = type;
-                        if(inFunctionDef)
-                        {
-                            currentMethodDef.types().add(type);
-                        }
-                        return;
+        switch (token.type) {
+        case WORD: {
+            for (NSType type : NSTypes.list()) {
+                if (type.getID().equals(token.content)) {
+                    pendingType = type;
+                    if (inFunctionDef) {
+                        currentMethodDef.types().add(type);
                     }
+                    return;
                 }
-                if(isNumber(token.content))
-                {
-                    try
-                    {
-                        int value = Integer.parseInt(token.content);
-                        insnList.add(new NSLoadIntInsn(value));
-                        typeStack.push(NSTypes.INT_TYPE);
-                        return;
-                    }
-                    catch(Exception e)
-                    {
-                        ;
-                    }
+            }
+            if (isNumber(token.content)) {
+                try {
+                    int value = Integer.parseInt(token.content);
+                    insnList.add(new NSLoadIntInsn(value));
+                    typeStack.push(NSTypes.INT_TYPE);
+                    return;
+                } catch (Exception e) {
+                    ;
+                }
 
-                    float value = Float.parseFloat(token.content);
-                    insnList.add(new NSLoadFloatInsn(value));
-                    typeStack.push(NSTypes.FLOAT_TYPE);
+                float value = Float.parseFloat(token.content);
+                insnList.add(new NSLoadFloatInsn(value));
+                typeStack.push(NSTypes.FLOAT_TYPE);
+            } else {
+                int vindex = -1;
+                if (pendingType != null) {
+                    if (inFunctionDef) {
+                        currentMethodDef.paramNames().add(token.content);
+                    } else {
+                        vindex = nextVarIndex();
+                        insnList.add(new NewVarInsn(pendingType, token.content, vindex));
+                        varName2Type.put(token.content, pendingType);
+                        varName2Id.put(token.content, vindex);
+                    }
+                    pendingType = null;
+                } else {
+                    vindex = -1;
+                    if (varName2Id.containsKey(token.content)) {
+                        vindex = varName2Id.get(token.content);
+                    }
                 }
-                else
-                {
-                    int vindex = -1;
-                    if(pendingType != null)
-                    {
-                        if(inFunctionDef)
-                        {
-                            currentMethodDef.paramNames().add(token.content);
-                        }
-                        else
-                        {
-                            vindex = nextVarIndex();
-                            insnList.add(new NewVarInsn(pendingType, token.content, vindex));
-                            varName2Type.put(token.content, pendingType);
-                            varName2Id.put(token.content, vindex);
-                        }
-                        pendingType = null;
-                    }
-                    else
-                    {
-                        vindex = -1;
-                        if(varName2Id.containsKey(token.content))
-                        {
-                            vindex = varName2Id.get(token.content);
-                        }
-                    }
-                    if(!inFunctionDef)
-                    {
-                        if(clazz.field(token.content) != null)
-                        {
-                            NSType type = varName2Type.get(token.content); // FIXME: Use something else than varName2Type, this code relies on a glitch
-                            varPointer.pushField(new FieldInfo(token.content, clazz.name(), type));
-                            insnList.add(new NSFieldInsn(FIELD_LOAD, clazz.name(), token.content));
-                            typeStack.add(type);
-                        }
-                        else
-                        {
-                            varPointer.pushVariable(vindex);
-                            insnList.add(new NSVarInsn(VAR_LOAD, vindex));
-                            typeStack.push(varName2Type.get(token.content));
-                        }
+                if (!inFunctionDef) {
+                    if (clazz.field(token.content) != null) {
+                        NSType type = varName2Type.get(token.content); // FIXME: Use something else than varName2Type, this code relies on a glitch
+                        varPointer.pushField(new FieldInfo(token.content, clazz.name(), type));
+                        insnList.add(new NSFieldInsn(FIELD_LOAD, clazz.name(), token.content));
+                        typeStack.add(type);
+                    } else {
+                        varPointer.pushVariable(vindex);
+                        insnList.add(new NSVarInsn(VAR_LOAD, vindex));
+                        typeStack.push(varName2Type.get(token.content));
                     }
                 }
             }
-                break;
+        }
+            break;
 
-            case STRING:
-            {
-                insnList.add(new LoadConstantInsn(token.content));
-                typeStack.push(NSTypes.STRING_TYPE);
-            }
-                break;
+        case STRING: {
+            insnList.add(new LoadConstantInsn(token.content));
+            typeStack.push(NSTypes.STRING_TYPE);
+        }
+            break;
 
-            case OPERATOR:
-            {
-                NSOperator operator = ((OperatorToken) token).operator();
-                if(operator == NSOperator.MEMBER_ACCESS)
+        case OPERATOR: {
+            NSOperator operator = ((OperatorToken) token).operator();
+            if (operator == NSOperator.MEMBER_ACCESS) {
+                NSInsn previous = insnList.get(insnList.size() - 1);
+                if (previous.getOpcode() == FUNCTION_CALL) {
+                    FunctionCallInsn callInsn = (FunctionCallInsn) previous;
+                    callInsn.functionOwner(FunctionCallInsn.PREVIOUS);
+                } else if (previous.getOpcode() == VAR_LOAD) // VAR_LOAD -1 if everything's okay
                 {
-                    NSInsn previous = insnList.get(insnList.size() - 1);
-                    if(previous.getOpcode() == FUNCTION_CALL)
-                    {
-                        FunctionCallInsn callInsn = (FunctionCallInsn) previous;
-                        callInsn.functionOwner(FunctionCallInsn.PREVIOUS);
+                    String id = "Object";
+                    varPointer.popValue(); // We remove the invalid variable on top of the variable stack
+                    if (varPointer.isVar()) {
+                        if (varPointer.peekVarId() == -1) {
+                            throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                        }
+                        id = varName2Type.get(nameOf(varPointer.peekVarId())).getID();
+                    } else {
+                        if (varPointer.peekField() == null) {
+                            throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                        }
+                        id = varPointer.peekField().type().getID();
                     }
-                    else if(previous.getOpcode() == VAR_LOAD) // VAR_LOAD -1 if everything's okay
-                    {
-                        String id = "Object";
-                        varPointer.popValue(); // We remove the invalid variable on top of the variable stack
-                        if(varPointer.isVar())
-                        {
-                            if(varPointer.peekVarId() == -1)
-                            {
-                                throwCompilerException("Tried to access a field of a non-existing field/variable.");
-                            }
-                            id = varName2Type.get(nameOf(varPointer.peekVarId())).getID();
-                        }
-                        else
-                        {
-                            if(varPointer.peekField() == null)
-                            {
-                                throwCompilerException("Tried to access a field of a non-existing field/variable.");
-                            }
-                            id = varPointer.peekField().type().getID();
-                        }
-                        insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, tokenList.get(tokenIndex - 1).content));
-                        System.err.println("{{{ content = " + tokenList.get(tokenIndex - 1).content + " ; id = " + id);
+                    insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, tokenList.get(tokenIndex - 1).content));
+                    System.err.println("{{{ content = " + tokenList.get(tokenIndex - 1).content + " ; id = " + id);
+                    typeStack.pop();
+                    typeStack.push(NSTypes.fromIDOrDummy(id));
+                }
+            } else if (operator == NSOperator.ASSIGNEMENT) {
+                if (varPointer.isVar()) {
+                    if (varPointer.peekVarId() == -1) {
+                        throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
+                    } else {
+                        insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
                         typeStack.pop();
-                        typeStack.push(NSTypes.fromIDOrDummy(id));
                     }
+                    varPointer.popValue();
+                } else if (varPointer.isField()) {
+                    if (varPointer.peekField() == null) {
+                        throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
+                    } else {
+                        FieldInfo infos = varPointer.peekField();
+                        insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
+                        typeStack.pop();
+                    }
+                    varPointer.popValue();
+                } else
+                    throwCompilerException("Tried to assign a value to an object that is not a variable.");
+            } else if (operator == NSOperator.INCREMENT || operator == NSOperator.DECREMENT) {
+                if (varPointer.isVar()) {
+                    if (varPointer.peekVarId() == -1) {
+                        throwCompilerException("Invalid argument for operator ++/--");
+                    } else {
+                        insnList.add(new NSLoadIntInsn(1));
+                        insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
+                        insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
+                        insnList.add(new NSVarInsn(VAR_LOAD, varPointer.peekVarId()));
+                    }
+                    varPointer.popValue();
+                } else if (varPointer.isField()) {
+                    if (varPointer.peekField() == null) {
+                        throwCompilerException("Invalid argument for operator ++/--");
+                    } else {
+                        insnList.add(new NSLoadIntInsn(1));
+                        insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
+                        FieldInfo infos = varPointer.peekField();
+                        insnList.add(new NSFieldInsn(FIELD_LOAD, infos.owner(), infos.name()));
+                        insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
+                    }
+                    varPointer.popValue();
                 }
-                else if(operator == NSOperator.ASSIGNEMENT)
-                {
-                    if(varPointer.isVar())
-                    {
-                        if(varPointer.peekVarId() == -1)
-                        {
-                            throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
-                        }
-                        else
-                        {
-                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
-                            typeStack.pop();
-                        }
-                        varPointer.popValue();
+            } else {
+                NSType lastType = typeStack.pop();
+                NSType type = typeStack.pop(); // We get the type right before the last type loaded
+                NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
+                typeStack.push(result.type());
+                insnList.add(new OperatorInsn(operator));
+            }
+        }
+            break;
+
+        case FUNCTION_CALL: {
+            if (inFunctionDef) {
+                currentMethodDef.name(token.content);
+            } else {
+                insnList.add(new FunctionCallInsn(token.content).functionOwner(FunctionCallInsn.UNKNOWN_YET).types(typeStack));
+            }
+        }
+            break;
+
+        case KEYWORD: {
+            KeywordToken keyword = (KeywordToken) token;
+            switch (keyword.keyword()) {
+            case IF: {
+                insnList.add(new StackInsn(STACK_PUSH));
+                insnList.add(new StackInsn(STACK_PEEK));
+                insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
+                pushLabelID();
+                loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.IF));
+            }
+                break;
+
+            case ELSE: {
+                popLabelID();
+                insnList.add(new LabelInsn(new Label(nextLabelID())));
+                insnList.add(new StackInsn(STACK_PEEK));
+                insnList.add(new LabelInsn(IF_GOTO, new Label(getCurrentLabelID())));
+                pushLabelID();
+                loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.ELSE));
+            }
+                break;
+
+            case END: {
+                insnList.add(new StackInsn(STACK_POP));
+                insnList.add(new NSBaseInsn(POP));
+                LoopStartingPoint point = loopStartStack.pop();
+                if (point.type() == NSKeywords.WHILE) {
+                    insnList.add(new LabelInsn(GOTO, new Label(point.labelID())));
+                } else
+                    ;
+                popLabelID();
+            }
+                break;
+
+            case TRUE: {
+                insnList.add(new LoadConstantInsn(true));
+                typeStack.push(NSTypes.BOOL_TYPE);
+            }
+                break;
+
+            case FALSE: {
+                insnList.add(new LoadConstantInsn(false));
+                typeStack.push(NSTypes.BOOL_TYPE);
+            }
+                break;
+
+            case NAMESPACE: {
+                NSInsn prev = insnList.get(insnList.size() - 1);
+                if (prev.getOpcode() == LOAD_CONSTANT) {
+                    LoadConstantInsn loadInsn = (LoadConstantInsn) prev;
+                    Object cst = loadInsn.getConstant();
+                    if (cst instanceof String) {
+                        this.namespace = (String) cst;
                     }
-                    else if(varPointer.isField())
-                    {
-                        if(varPointer.peekField() == null)
-                        {
-                            throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
-                        }
-                        else
-                        {
-                            FieldInfo infos = varPointer.peekField();
-                            insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
-                            typeStack.pop();
-                        }
-                        varPointer.popValue();
-                    }
-                    else
-                        throwCompilerException("Tried to assign a value to an object that is not a variable.");
-                }
-                else if(operator == NSOperator.INCREMENT || operator == NSOperator.DECREMENT)
-                {
-                    if(varPointer.isVar())
-                    {
-                        if(varPointer.peekVarId() == -1)
-                        {
-                            throwCompilerException("Invalid argument for operator ++/--");
-                        }
-                        else
-                        {
-                            insnList.add(new NSLoadIntInsn(1));
-                            insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
-                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
-                            insnList.add(new NSVarInsn(VAR_LOAD, varPointer.peekVarId()));
-                        }
-                        varPointer.popValue();
-                    }
-                    else if(varPointer.isField())
-                    {
-                        if(varPointer.peekField() == null)
-                        {
-                            throwCompilerException("Invalid argument for operator ++/--");
-                        }
-                        else
-                        {
-                            insnList.add(new NSLoadIntInsn(1));
-                            insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
-                            FieldInfo infos = varPointer.peekField();
-                            insnList.add(new NSFieldInsn(FIELD_LOAD, infos.owner(), infos.name()));
-                            insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
-                        }
-                        varPointer.popValue();
-                    }
-                }
-                else
-                {
-                    NSType lastType = typeStack.pop();
-                    NSType type = typeStack.pop(); // We get the type right before the last type loaded
-                    NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
-                    typeStack.push(result.type());
-                    insnList.add(new OperatorInsn(operator));
+                    insnList.remove(insnList.size() - 1);
+                } else {
+                    throwCompilerException("Unexepected namespace identifier. Only string literals are allowed");
                 }
             }
                 break;
 
-            case FUNCTION_CALL:
-            {
-                if(inFunctionDef)
-                {
-                    currentMethodDef.name(token.content);
-                }
-                else
-                {
-                    insnList.add(new FunctionCallInsn(token.content).functionOwner(FunctionCallInsn.UNKNOWN_YET).types(typeStack));
-                }
+            case WHILE: {
+                loopStartStack.push(new LoopStartingPoint(getPreviousLabelID(), NSKeywords.WHILE));
+                insnList.add(new StackInsn(STACK_PUSH));
+                insnList.add(new StackInsn(STACK_PEEK));
+                insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
+                pushLabelID();
             }
                 break;
 
-            case KEYWORD:
-            {
-                KeywordToken keyword = (KeywordToken) token;
-                switch(keyword.keyword())
-                {
-                    case IF:
-                    {
-                        insnList.add(new StackInsn(STACK_PUSH));
-                        insnList.add(new StackInsn(STACK_PEEK));
-                        insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
-                        pushLabelID();
-                        loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.IF));
-                    }
-                        break;
-
-                    case ELSE:
-                    {
-                        popLabelID();
-                        insnList.add(new LabelInsn(new Label(nextLabelID())));
-                        insnList.add(new StackInsn(STACK_PEEK));
-                        insnList.add(new LabelInsn(IF_GOTO, new Label(getCurrentLabelID())));
-                        pushLabelID();
-                        loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.ELSE));
-                    }
-                        break;
-
-                    case END:
-                    {
-                        insnList.add(new StackInsn(STACK_POP));
-                        insnList.add(new NSBaseInsn(POP));
-                        LoopStartingPoint point = loopStartStack.pop();
-                        if(point.type() == NSKeywords.WHILE)
-                        {
-                            insnList.add(new LabelInsn(GOTO, new Label(point.labelID())));
-                        }
-                        else
-                            ;
-                        popLabelID();
-                    }
-                        break;
-
-                    case TRUE:
-                    {
-                        insnList.add(new LoadConstantInsn(true));
-                        typeStack.push(NSTypes.BOOL_TYPE);
-                    }
-                        break;
-
-                    case FALSE:
-                    {
-                        insnList.add(new LoadConstantInsn(false));
-                        typeStack.push(NSTypes.BOOL_TYPE);
-                    }
-                        break;
-
-                    case NAMESPACE:
-                    {
-                        NSInsn prev = insnList.get(insnList.size() - 1);
-                        if(prev.getOpcode() == LOAD_CONSTANT)
-                        {
-                            LoadConstantInsn loadInsn = (LoadConstantInsn) prev;
-                            Object cst = loadInsn.getConstant();
-                            if(cst instanceof String)
-                            {
-                                this.namespace = (String) cst;
-                            }
-                            insnList.remove(insnList.size() - 1);
-                        }
-                        else
-                        {
-                            throwCompilerException("Unexepected namespace identifier. Only string literals are allowed");
-                        }
-                    }
-                        break;
-
-                    case WHILE:
-                    {
-                        loopStartStack.push(new LoopStartingPoint(getPreviousLabelID(), NSKeywords.WHILE));
-                        insnList.add(new StackInsn(STACK_PUSH));
-                        insnList.add(new StackInsn(STACK_PEEK));
-                        insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
-                        pushLabelID();
-                    }
-                        break;
-
-                    case FUNCTION_DEF:
-                    {
-                        inFunctionDef = true;
-                        pushState();
-                        currentMethodDef = (NSFuncDef) new NSFuncDef().owner(clazz.name());
-                        clazz.methods().add(currentMethodDef);
-                    }
-                        break;
-
-                    case CODE_BLOCK_START:
-                    {
-                        if(inFunctionDef)
-                        {
-                            //                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
-                            inFunctionDef = false;
-                            varId = 1;
-                            varName2Id.clear(); // TODO: Might need to push it before clearing it to save root method variables
-                            for(int i = 0; i < currentMethodDef.paramNames().size(); i++ )
-                            {
-                                String name = currentMethodDef.paramNames().get(i);
-                                NSType type = currentMethodDef.types().get(i);
-                                varName2Id.put(name, varId);
-                                varName2Type.put(name, type);
-                                //                                currentMethodDef.instructions().add(new NewVarInsn(type, name, nextVarIndex()));
-                            }
-                        }
-                        else
-                            throwCompilerException("You must be defining a method to use a code block starting point");
-                    }
-                        break;
-
-                    case CODE_BLOCK_END:
-                    {
-                        popState();
-                    }
-                        break;
-
-                    case RETURN:
-                    {
-                        if(typeStack != null)
-                        {
-                            insnList.add(new NSBaseInsn(RETURN_VALUE));
-                        }
-                        else
-                            insnList.add(new NSBaseInsn(RETURN));
-                    }
-                        break;
-
-                    case FIELD:
-                        NSCodeToken typeToken = tokenList.get(tokenIndex - 2);
-                        NSCodeToken nameToken = tokenList.get(tokenIndex - 1);
-                        if(typeToken.type != NSTokenType.WORD || nameToken.type != NSTokenType.WORD)
-                            throwCompilerException("Unexepected tokens after 'field': '" + typeToken.content + "' '" + nameToken.content + "'");
-                        insnList.remove(insnList.size() - 2); // We remove the last NEW_VAR
-                        insnList.remove(insnList.size() - 1); // We remove the last VAR_LOAD
-                        int oldId = rollbackVarIndex(); // We remove the var id created for this variable
-                        String oldName = removeName(oldId);
-                        varName2Type.remove(oldName);
-                        NSType type = typeStack.pop(); // We remove the type pushed onto the stack
-
-                        // Start of creating the field
-                        clazz.field(type, nameToken.content);
-                        varPointer.pushField(new FieldInfo(nameToken.content, clazz.name(), type));
-                        break;
-
-                    default:
-                        break;
-                }
+            case FUNCTION_DEF: {
+                inFunctionDef = true;
+                pushState();
+                currentMethodDef = (NSFuncDef) new NSFuncDef().owner(clazz.name());
+                clazz.methods().add(currentMethodDef);
             }
+                break;
+
+            case CODE_BLOCK_START: {
+                if (inFunctionDef) {
+                    //                            System.out.println("%%% NEW FUNCTION: " + currentMethodDef.toString());
+                    inFunctionDef = false;
+                    varId = 1;
+                    varName2Id.clear(); // TODO: Might need to push it before clearing it to save root method variables
+                    for (int i = 0; i < currentMethodDef.paramNames().size(); i++) {
+                        String name = currentMethodDef.paramNames().get(i);
+                        NSType type = currentMethodDef.types().get(i);
+                        varName2Id.put(name, varId);
+                        varName2Type.put(name, type);
+                        //                                currentMethodDef.instructions().add(new NewVarInsn(type, name, nextVarIndex()));
+                    }
+                } else
+                    throwCompilerException("You must be defining a method to use a code block starting point");
+            }
+                break;
+
+            case CODE_BLOCK_END: {
+                popState();
+            }
+                break;
+
+            case RETURN: {
+                if (typeStack != null) {
+                    insnList.add(new NSBaseInsn(RETURN_VALUE));
+                } else
+                    insnList.add(new NSBaseInsn(RETURN));
+            }
+                break;
+
+            case FIELD:
+                NSCodeToken typeToken = tokenList.get(tokenIndex - 2);
+                NSCodeToken nameToken = tokenList.get(tokenIndex - 1);
+                if (typeToken.type != NSTokenType.WORD || nameToken.type != NSTokenType.WORD)
+                    throwCompilerException("Unexepected tokens after 'field': '" + typeToken.content + "' '" + nameToken.content + "'");
+                insnList.remove(insnList.size() - 2); // We remove the last NEW_VAR
+                insnList.remove(insnList.size() - 1); // We remove the last VAR_LOAD
+                int oldId = rollbackVarIndex(); // We remove the var id created for this variable
+                String oldName = removeName(oldId);
+                varName2Type.remove(oldName);
+                NSType type = typeStack.pop(); // We remove the type pushed onto the stack
+
+                // Start of creating the field
+                clazz.field(type, nameToken.content);
+                varPointer.pushField(new FieldInfo(nameToken.content, clazz.name(), type));
                 break;
 
             default:
                 break;
+            }
+        }
+            break;
+
+        default:
+            break;
         }
     }
 
-    private String nameOf(int asVarId)
-    {
+    private String nameOf(int asVarId) {
         // TODO: implement
         return null;
     }
 
-    private String removeName(int oldId)
-    {
-        for(Entry<String, Integer> entry : varName2Id.entrySet())
-        {
-            if(entry.getValue() == oldId)
-            {
+    private String removeName(int oldId) {
+        for (Entry<String, Integer> entry : varName2Id.entrySet()) {
+            if (entry.getValue() == oldId) {
                 varName2Id.remove(entry.getKey());
                 return entry.getKey();
             }
@@ -999,77 +759,62 @@ public class NSCompiler implements NSOps
         return null;
     }
 
-    private int rollbackVarIndex()
-    {
+    private int rollbackVarIndex() {
         int copy = varId;
-        varId-- ;
+        varId--;
         return copy;
     }
 
-    private boolean isNumber(String content)
-    {
-        try
-        {
+    private boolean isNumber(String content) {
+        try {
             Integer.parseInt(content);
             return true;
-        }
-        catch(Exception e)
-        {
+        } catch (Exception e) {
             ;
         }
 
-        try
-        {
+        try {
             Float.parseFloat(content);
             return true;
-        }
-        catch(Exception e)
-        {
+        } catch (Exception e) {
             ;
         }
         return false;
     }
 
-    private int nextVarIndex()
-    {
-        return varId++ ;
+    private int nextVarIndex() {
+        return varId++;
     }
 
     private static final String SUB_LABEL_SEPARATOR = "-";
 
-    private void popLabelID()
-    {
+    private void popLabelID() {
         labelBase = labelBase.substring(0, labelBase.lastIndexOf(SUB_LABEL_SEPARATOR));
         int min = labelBase.lastIndexOf(SUB_LABEL_SEPARATOR) + 1;
-        if(min <= 0)
+        if (min <= 0)
             min = 1;
         labelID = Integer.parseInt(labelBase.substring(min));
         labelBase = labelBase.substring(0, labelBase.length() - ("" + labelID).length());
     }
 
-    private void pushLabelID()
-    {
+    private void pushLabelID() {
         labelBase += labelID + SUB_LABEL_SEPARATOR;
         labelID = 0;
     }
 
-    private String getPreviousLabelID()
-    {
+    private String getPreviousLabelID() {
         return labelBase + (labelID - 1);
     }
 
-    private String getCurrentLabelID()
-    {
+    private String getCurrentLabelID() {
         return labelBase + labelID;
     }
 
-    private String nextLabelID()
-    {
-        return labelBase + (labelID++ );
+    private String nextLabelID() {
+        return labelBase + (labelID++);
     }
 
-    private void pushState()
-    {
+    private void pushState() {
         states.push(new CompilerState(varName2Id, varName2Type, varId, labelBase, labelID, currentMethodDef));
         varName2Id.clear();
         varName2Type.clear();
@@ -1078,8 +823,7 @@ public class NSCompiler implements NSOps
         labelID = 0;
     }
 
-    private void popState()
-    {
+    private void popState() {
         CompilerState state = states.pop();
         varName2Id = state.varNamesToIds();
         varName2Type = state.varNamesToTypes();

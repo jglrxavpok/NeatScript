@@ -4,78 +4,65 @@ import java.util.*;
 
 import org.jglr.ns.types.*;
 
-public class NSObject
-{
+public class NSObject {
 
-    private NSType                    type;
-    private Object                    object;
+    private NSType type;
+    private Object object;
     private HashMap<String, NSObject> fields;
 
-    public NSObject(NSType type)
-    {
+    public NSObject(NSType type) {
         this(type, true);
     }
 
-    public NSObject(NSType type, Object object)
-    {
+    public NSObject(NSType type, Object object) {
         this(type, object, true);
     }
 
-    public NSObject(NSType type, boolean init)
-    {
+    public NSObject(NSType type, boolean init) {
         this(type, null, init);
     }
 
-    public NSObject(NSType type, Object value, boolean init)
-    {
+    public NSObject(NSType type, Object value, boolean init) {
         this.type = type;
         this.object = value;
         fields = new HashMap<>();
-        if(init)
+        if (init)
             type.init(this);
     }
 
-    public Collection<String> fieldNames()
-    {
+    public Collection<String> fieldNames() {
         return fields.keySet();
     }
 
-    public NSType type()
-    {
+    public NSType type() {
         return type;
     }
 
-    public NSObject value(Object object)
-    {
+    public NSObject value(Object object) {
         this.object = object;
         type.init(this);
         return this;
     }
 
-    public Object value()
-    {
+    public Object value() {
         return object;
     }
 
-    public NSObject copy()
-    {
+    public NSObject copy() {
         return new NSObject(type, object);
     }
 
-    public NSObject field(String fieldName, NSObject value)
-    {
+    public NSObject field(String fieldName, NSObject value) {
         fields.put(fieldName, value);
         return this;
     }
 
-    public NSObject field(String fieldName)
-    {
+    public NSObject field(String fieldName) {
         NSObject object = fields.get(fieldName);
         return object;
     }
 
-    public Object castedValue(NSType type)
-    {
+    public Object castedValue(NSType type) {
         return this.type.cast(object, type);
     }
 

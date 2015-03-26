@@ -4,36 +4,30 @@ import java.io.*;
 
 import org.jglr.ns.vm.*;
 
-public class LoadConstantInsn extends NSInsn
-{
+public class LoadConstantInsn extends NSInsn {
 
     private Object value;
 
-    public LoadConstantInsn(Object val)
-    {
+    public LoadConstantInsn(Object val) {
         super(LOAD_CONSTANT);
         this.value = val;
     }
 
-    public Object getConstant()
-    {
+    public Object getConstant() {
         return value;
     }
 
-    public String toString()
-    {
+    public String toString() {
         String str = value + "";
-        if(value instanceof String)
-        {
+        if (value instanceof String) {
             str = "\"" + str + "\"";
         }
         return super.toString() + " " + str;
     }
 
     @Override
-    public NSInsn write(DataOutput out) throws IOException
-    {
-        if(value == null)
+    public NSInsn write(DataOutput out) throws IOException {
+        if (value == null)
             out.writeUTF("Nothing");
         else
             out.writeUTF(value.getClass().getSimpleName());
@@ -43,27 +37,25 @@ public class LoadConstantInsn extends NSInsn
     }
 
     @Override
-    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException
-    {
+    public NSInsn read(NSVirtualMachine vm, DataInput in) throws IOException {
         String type = in.readUTF();
         String value = in.readUTF();
-        switch(type)
-        {
-            case "String":
-                this.value = value;
-                break;
+        switch (type) {
+        case "String":
+            this.value = value;
+            break;
 
-            case "Float":
-                this.value = Float.parseFloat(value);
-                break;
+        case "Float":
+            this.value = Float.parseFloat(value);
+            break;
 
-            case "Integer":
-                this.value = Integer.parseInt(value);
-                break;
+        case "Integer":
+            this.value = Integer.parseInt(value);
+            break;
 
-            case "Nothing":
-                this.value = null;
-                break;
+        case "Nothing":
+            this.value = null;
+            break;
         }
 
         return this;

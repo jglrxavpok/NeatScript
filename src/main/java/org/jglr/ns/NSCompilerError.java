@@ -1,10 +1,8 @@
 package org.jglr.ns;
 
-public class NSCompilerError extends Error
-{
+public class NSCompilerError extends Error {
 
-    public NSCompilerError(String string)
-    {
+    public NSCompilerError(String string) {
         super(string);
     }
 

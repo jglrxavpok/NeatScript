@@ -5,22 +5,18 @@ import java.io.*;
 import org.jglr.ns.*;
 import org.jglr.ns.vm.*;
 
-public abstract class NSInsn implements NSOps
-{
+public abstract class NSInsn implements NSOps {
     private int opcode;
 
-    public NSInsn(int opcode)
-    {
+    public NSInsn(int opcode) {
         this.opcode = opcode;
     }
 
-    public int getOpcode()
-    {
+    public int getOpcode() {
         return opcode;
     }
 
-    public String toString()
-    {
+    public String toString() {
         return NSOps.name(getOpcode());
     }
 

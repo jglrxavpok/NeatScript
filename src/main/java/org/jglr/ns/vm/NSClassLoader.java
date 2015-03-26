@@ -2,25 +2,21 @@ package org.jglr.ns.vm;
 
 import org.jglr.ns.*;
 
-public abstract class NSClassLoader
-{
+public abstract class NSClassLoader {
 
-    private NSClassParser    classParser;
+    private NSClassParser classParser;
     private NSVirtualMachine vm;
 
-    public NSClassLoader(NSVirtualMachine vm, NSClassParser parser)
-    {
+    public NSClassLoader(NSVirtualMachine vm, NSClassParser parser) {
         this.vm = vm;
         this.classParser = parser;
     }
 
-    public NSVirtualMachine vm()
-    {
+    public NSVirtualMachine vm() {
         return vm;
     }
 
-    public NSClassParser classParser()
-    {
+    public NSClassParser classParser() {
         return classParser;
     }
 

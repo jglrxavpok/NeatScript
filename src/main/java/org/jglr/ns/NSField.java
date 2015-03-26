@@ -2,16 +2,13 @@ package org.jglr.ns;
 
 import org.jglr.ns.types.*;
 
-public class NSField extends NSVariable
-{
+public class NSField extends NSVariable {
 
-    public NSField(NSType type, String name)
-    {
+    public NSField(NSType type, String name) {
         super(type, name, -42);
     }
 
-    public String toString()
-    {
+    public String toString() {
         return type().getID() + " " + name();
     }
 }
