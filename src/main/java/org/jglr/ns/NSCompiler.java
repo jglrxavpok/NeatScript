@@ -669,9 +669,10 @@ public class NSCompiler implements NSOps
                     {
                         if(clazz.field(token.content) != null)
                         {
-                            varPointer.pushField(new FieldInfo(token.content, clazz.name(), varName2Type.get(token.content))); // FIXME: Use something else than varName2Type, this code relies on a glitch
+                            NSType type = varName2Type.get(token.content); // FIXME: Use something else than varName2Type, this code relies on a glitch
+                            varPointer.pushField(new FieldInfo(token.content, clazz.name(), type));
                             insnList.add(new NSFieldInsn(FIELD_LOAD, clazz.name(), token.content));
-                            typeStack.add(NSTypes.OBJECT_TYPE);
+                            typeStack.add(type);
                         }
                         else
                         {
@@ -725,6 +726,7 @@ public class NSCompiler implements NSOps
                         insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, tokenList.get(tokenIndex - 1).content));
                         System.err.println("{{{ content = " + tokenList.get(tokenIndex - 1).content + " ; id = " + id);
                         typeStack.pop();
+                        typeStack.push(NSTypes.fromIDOrDummy(id));
                     }
                 }
                 else if(operator == NSOperator.ASSIGNEMENT)
