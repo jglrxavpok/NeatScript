@@ -1,19 +1,13 @@
 package org.jglr.ns.types;
 
 import org.jglr.ns.*;
-import org.jglr.ns.vm.*;
 
 public class NSClassType extends NSType {
 
     private NSClass clazz;
 
-    public NSClassType(NSClass clazz) throws NSClassNotFoundException {
-        this(clazz, false);
-    }
-
-    public NSClassType(NSClass clazz, boolean dummy) throws NSClassNotFoundException {
-        super(clazz.name(), dummy ? NSTypes.OBJECT_TYPE : NSVirtualMachine.instance().getType(clazz.superclass()));
-        this.clazz = clazz;
+    public NSClassType(String name) {
+        super(name, NSTypes.OBJECT_TYPE);
     }
 
     @Override
@@ -21,11 +15,37 @@ public class NSClassType extends NSType {
         return new NSObject(this, null);
     }
 
+    @Override
+    public boolean isCastable(NSType type) {
+        return type == this;
+    }
+
+    @Override
+    public Object cast(Object value, NSType type) {
+        if (type == this)
+            return value;
+        return super.cast(value, type);
+    }
+
     public NSType init(NSObject object) {
         for (NSField field : clazz.fields()) {
             object.field(field.name(), field.value());
         }
         return this;
+    }
+
+    public NSClassType typeClass(NSClass clazz) {
+        this.clazz = clazz;
+        return this;
+    }
+
+    public NSClass typeClass() {
+        return clazz;
+    }
+
+    @Override
+    public void initType() {
+        supertype(NSTypes.fromID(clazz.superclass()));
     }
 
 }

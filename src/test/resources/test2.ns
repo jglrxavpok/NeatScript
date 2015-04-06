@@ -1,19 +1,6 @@
-function $(Int i)
-{
-	Int testNbr = i;
-	Int index = 1;
-	print("i is: "+i);
-	print("testNbr is: "+testNbr);
-	testNbr = testNbr + 2;
-	while(index < 10)
-		index++;
-		testNbr = index*5 + testNbr;
-		print("testNbr is: "+testNbr+" and index is "+index);
-	end
-	;
-}
-
-function $()
-{
-	print("Default cons called");
-}
+Bool a = true;
+if a then
+	"Hello!";
+else
+	"Hello!2";
+end

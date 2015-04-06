@@ -78,4 +78,10 @@ public class NSIntType extends NSType {
         }
         return super.cast(value, type);
     }
+
+    @Override
+    public void initType() {
+        // TODO Implement
+
+    }
 }

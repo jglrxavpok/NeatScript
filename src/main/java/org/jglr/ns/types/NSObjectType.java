@@ -21,4 +21,10 @@ public class NSObjectType extends NSType {
         return new NSObject(this, new Object());
     }
 
+    @Override
+    public void initType() {
+        // TODO Implement
+
+    }
+
 }

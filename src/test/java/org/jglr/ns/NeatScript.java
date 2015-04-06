@@ -11,7 +11,7 @@ public class NeatScript implements NSOps, NSTypes {
     @Test
     public void testCompile() throws NSCompilerException, IOException, NSClassNotFoundException, NSNoSuchMethodException,
             NSVirtualMachineException {
-        NSSourceFile source = new NSSourceFile("TestClass.ns", NeatScript.class.getResourceAsStream("/test.ns"));
+        NSSourceFile source = new NSSourceFile("TestClass.ns", NeatScript.class.getResourceAsStream("/test2.ns"));
 
         //  NSSourceFile source2 = new NSSourceFile("SecondTest.ns", NeatScript.class.getResourceAsStream("/test2.ns"));
         NSCompiler compiler = new NSCompiler();

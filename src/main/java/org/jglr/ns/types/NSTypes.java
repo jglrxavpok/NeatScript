@@ -41,6 +41,12 @@ public interface NSTypes {
         return list;
     }
 
+    public static void initAllTypes() {
+        for (NSType t : list()) {
+            t.initType();
+        }
+    }
+
     public static NSType fromID(String id) {
         for (NSType t : list) {
             if (t.getID().equals(id))
@@ -57,6 +63,11 @@ public interface NSTypes {
             @Override
             public NSObject emptyObject() {
                 return new NSObject(this);
+            }
+
+            @Override
+            public void initType() {
+                ;
             }
         };
     }

@@ -1,7 +1,6 @@
 package org.jglr.ns.types;
 
 import org.jglr.ns.*;
-import org.jglr.ns.types.*;
 
 public class NSDummyType extends NSType {
 
@@ -12,6 +11,12 @@ public class NSDummyType extends NSType {
     @Override
     public NSObject emptyObject() {
         return new NSObject(this, new Object());
+    }
+
+    @Override
+    public void initType() {
+        // TODO Implement
+
     }
 
 }

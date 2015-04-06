@@ -34,6 +34,7 @@ public class NSCompiler implements NSOps {
 
     public NSCompiler() {
         NSOps.initAllNames();
+        NSTypes.initAllTypes();
         varPointer = new VariablePointer();
         varPointer.pushMode(VariablePointerMode.VARIABLE);
         this.namespace = "std";
@@ -86,11 +87,15 @@ public class NSCompiler implements NSOps {
             throwCompilerError("Instruction stack isn't empty. Problem while reading the source code.");
         }
         // We analyse the function calls to find if the owner is this class or another
+        Label currentLabel = null;
         for (NSAbstractMethod m : clazz.methods()) {
             if (m instanceof NSFuncDef) {
                 NSFuncDef method = (NSFuncDef) m;
                 for (NSInsn insn : method.instructions()) {
-                    if (insn.getOpcode() == FUNCTION_CALL) {
+                    if (insn.getOpcode() == LABEL) {
+                        LabelInsn labelInsn = (LabelInsn)insn;
+                        currentLabel = labelInsn.label();
+                    } else if (insn.getOpcode() == FUNCTION_CALL) {
                         FunctionCallInsn callInsn = (FunctionCallInsn) insn;
                         NSAbstractMethod calledMethod = null;
                         try {
@@ -113,9 +118,16 @@ public class NSCompiler implements NSOps {
                             }
                         }
                     }
+
+                }
+                while(currentLabel.id().contains(SUB_LABEL_SEPARATOR)) {
+                    Label newLabel = new Label(currentLabel.id().substring(0, currentLabel.id().indexOf(SUB_LABEL_SEPARATOR)));
+                    method.instructions().add(new LabelInsn(newLabel));
+                    currentLabel = newLabel;
                 }
             }
         }
+
         return clazz;
     }
 
@@ -540,10 +552,11 @@ public class NSCompiler implements NSOps {
                         }
                         id = varPointer.peekField().type().getID();
                     }
-                    insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, tokenList.get(tokenIndex - 1).content));
-                    System.err.println("{{{ content = " + tokenList.get(tokenIndex - 1).content + " ; id = " + id);
+                    String fieldName = tokenList.get(tokenIndex - 1).content;
+                    insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, fieldName));
+                    System.err.println("{{{ content = " + fieldName + " ; id = " + id);
                     typeStack.pop();
-                    typeStack.push(NSTypes.fromIDOrDummy(id));
+                    typeStack.push(NSTypes.fromIDOrDummy(id).emptyObject().field(fieldName).type());
                 }
             } else if (operator == NSOperator.ASSIGNEMENT) {
                 if (varPointer.isVar()) {

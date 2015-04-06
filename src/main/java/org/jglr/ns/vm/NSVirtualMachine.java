@@ -219,7 +219,9 @@ public class NSVirtualMachine {
             if (type.getID().equals(typeID))
                 return type;
         }
-        NSType type = new NSClassType(getOrLoad(typeID));
+        NSClassType type = new NSClassType(typeID);
+        type.typeClass(getOrLoad(typeID));
+        type.initType();
         NSTypes.list().add(type);
         return type;
     }
@@ -231,7 +233,9 @@ public class NSVirtualMachine {
     public NSVirtualMachine addClass(NSClass clazz) throws NSClassNotFoundException {
         classes.put(clazz.name(), clazz);
         printContent(clazz);
-        NSType type = new NSClassType(clazz);
+        NSClassType type = new NSClassType(clazz.name());
+        type.typeClass(clazz);
+        type.initType();
         NSTypes.list().add(type);
         return this;
     }

@@ -1,18 +1,18 @@
 "Start of program!";
 print("How are you going?" + " I'm a test program!" - " test");
 String txt = "Some text";
-field String txt1 = "dzqdqz";
+String txt1 = "dzqdqz";
 print("Size of txt1 is "+txt1.length()+" via length()");
 print("Size of txt1 is "+txt1.size+" via size");
-Int nbr = 10+txt1.size;
+Int nbr = 10+2;
 print(nbr);
 txt = "a";
 txt1;
-if(false) then
+if false then
 	"In If";
 else then
 	"In Else";
-	if(true == true) then
+	if true == true then
 		"In If of Else";
 	else then
 		"That never happens";
@@ -20,7 +20,7 @@ else then
 end
 
 Int i = 0;
-while(i < 10) then
+while i < 10 then
 	print("Value of i: "+(i++));
 	// Comment
 end

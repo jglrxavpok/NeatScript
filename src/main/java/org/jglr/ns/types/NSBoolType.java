@@ -38,4 +38,10 @@ public class NSBoolType extends NSType {
         return FALSE;
     }
 
+    @Override
+    public void initType() {
+        // TODO Implement
+
+    }
+
 }

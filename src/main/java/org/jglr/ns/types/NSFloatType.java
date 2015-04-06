@@ -62,4 +62,10 @@ public class NSFloatType extends NSType {
         return super.cast(value, type);
     }
 
+    @Override
+    public void initType() {
+        // TODO Implement
+
+    }
+
 }

@@ -24,6 +24,11 @@ public abstract class NSType {
         return supertype;
     }
 
+    protected NSType supertype(NSType type) {
+        this.supertype = type;
+        return this;
+    }
+
     public boolean isCastable(NSType type) {
         if (type == this)
             return true;
@@ -96,4 +101,6 @@ public abstract class NSType {
     public void setID(String string) {
         this.id = string;
     }
+
+    public abstract void initType();
 }
