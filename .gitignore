@@ -19,3 +19,4 @@ bin/
 .classpath
 *.nsc
 *.iml
+NeatScript.iml
