@@ -20,6 +20,7 @@ Branching
 ``if {condition} then
     {statements}
 end``
+
 Execute ``{statements}`` only if ``{condition}`` is equal to ``true``
 
 * Else
@@ -28,6 +29,7 @@ Execute ``{statements}`` only if ``{condition}`` is equal to ``true``
 else then
     {other statements}
 end``
+
 Execute ``{other statements}`` only if ``{condition}`` is equal to ``false``.
 Can only be used with an ``if``
 
