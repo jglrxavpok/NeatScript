@@ -16,6 +16,7 @@ public enum NSKeywords
     CODE_BLOCK_END("}", true),
     RETURN("return"),
     WHILE("while"),
+    UNTIL("until"),
     FIELD("field"),
     COMMENT_START("//"),
     NULL("null");

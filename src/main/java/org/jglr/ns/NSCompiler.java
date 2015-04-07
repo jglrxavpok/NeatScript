@@ -665,16 +665,20 @@ public class NSCompiler implements NSOps {
                         insnList.add(new StackInsn(STACK_POP));
                         insnList.add(new NSBaseInsn(POP));
                         LoopStartingPoint point = loopStartStack.pop();
-                        if (point.type() == NSKeywords.WHILE)
+                        if (point.type() == NSKeywords.WHILE || point.type() == NSKeywords.UNTIL)
                             insnList.add(new LabelInsn(GOTO, new Label(point.labelID())));
                         popLabelID();
                         break;
 
+                    case UNTIL:
                     case WHILE:
                         loopStartStack.push(new LoopStartingPoint(getPreviousLabelID(), NSKeywords.WHILE));
                         insnList.add(new StackInsn(STACK_PUSH));
                         insnList.add(new StackInsn(STACK_PEEK));
-                        insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
+                        if(keyword.keyword() == NSKeywords.WHILE)
+                            insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
+                        else
+                            insnList.add(new LabelInsn(IF_GOTO, new Label(getCurrentLabelID())));
                         pushLabelID();
                         break;
 

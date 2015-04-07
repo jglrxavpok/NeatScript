@@ -46,7 +46,7 @@ end``
 While ``{condition}`` is ``true``, ``{statements}`` is executed.
 ``{condition}`` is evaluated each time we iterate over the loop.
 
-* Until loop (NYI):
+* Until loop:
 
 ``until {condition} then
     {statements}
