@@ -10,7 +10,7 @@ public class NSStringClass extends NSNativeClass {
 
     public NSStringClass() {
         super("String");
-        javaMethod("length", this::length, NSTypes.STRING_TYPE);
+        javaMethod("length", this::length, NSTypes.INT_TYPE, new String[0]);
         field(new NSField(NSTypes.INT_TYPE, "size"));
     }
 

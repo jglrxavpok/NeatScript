@@ -3,12 +3,13 @@ package org.jglr.ns.types;
 import java.util.*;
 
 import org.jglr.ns.*;
+import org.jglr.ns.compiler.NSAbstractMethod;
 import org.jglr.ns.funcs.*;
 import org.jglr.ns.vm.*;
 
 public abstract class NSType {
 
-    private HashMap<String, NSNativeFunc> functions;
+    private HashMap<String, NSAbstractMethod> functions;
     private String id;
     private NSType supertype;
 
@@ -88,11 +89,11 @@ public abstract class NSType {
         return this;
     }
 
-    public void newFunction(String id, NSNativeFunc function) {
+    public void newFunction(String id, NSAbstractMethod function) {
         functions.put(id, function);
     }
 
-    public HashMap<String, NSNativeFunc> functions() {
+    public HashMap<String, NSAbstractMethod> functions() {
         return functions;
     }
 

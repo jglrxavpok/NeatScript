@@ -4,10 +4,28 @@ import java.util.*;
 
 public enum NSOperator
 {
-    PLUS("+", 4), MINUS("-", 4), TIMES("*", 3), DIVIDE("/", 3), MODULO("%", 3), AND("&", 8), BIT_XOR("^", 9), BIT_OR("|", 10), LEFT_SHIFT(
-            "<<", 5), RIGHT_SHIFT(">>", 5), LESS_THAN("<", 6), GREATER_THAN(">", 6), GEQUAL(">=", 6), LEQUAL("<=", 6), ASSIGNEMENT("=", 1),
-    NON_EQUALITY_CHECK("!=", 7), EQUALITY_CHECK("==", 7), UNSIGNED_RIGHT_SHIFT(">>>", 5), MEMBER_ACCESS(".", 7), INCREMENT("++", 2),
-    DECREMENT("--", 2), NEW("new", 10);
+    PLUS("+", 4),
+    MINUS("-", 4),
+    TIMES("*", 3),
+    DIVIDE("/", 3),
+    MODULO("%", 3),
+    AND("&", 8),
+    BIT_XOR("^", 9),
+    BIT_OR("|", 10),
+    LEFT_SHIFT("<<", 5),
+    RIGHT_SHIFT(">>", 5),
+    LESS_THAN("<", 6),
+    GREATER_THAN(">", 6),
+    GEQUAL(">=", 6),
+    LEQUAL("<=", 6),
+    ASSIGNEMENT("=", 1),
+    NON_EQUALITY_CHECK("!=", 7),
+    EQUALITY_CHECK("==", 7),
+    UNSIGNED_RIGHT_SHIFT(">>>", 5),
+    MEMBER_ACCESS(".", 7),
+    INCREMENT("++", 2),
+    DECREMENT("--", 2),
+    NEW("new", 10);
 
     private int precedence;
     private String string;

@@ -2,9 +2,23 @@ package org.jglr.ns;
 
 public enum NSKeywords
 {
-    IF("if"), ELSE("else", true), ELSEIF("elseif", true), DELETE("delete"), THEN("then", true), END("end", true), TRUE("true", 2000),
-    FALSE("false", 2000), NAMESPACE("namespace"), FUNCTION_DEF("function", true), CODE_BLOCK_START("{", true), CODE_BLOCK_END("}", true),
-    RETURN("return"), WHILE("while"), FIELD("field"), COMMENT_START("//");
+    IF("if"),
+    ELSE("else", true),
+    ELSEIF("elseif", true),
+    DELETE("delete"),
+    THEN("then", true),
+    END("end", true),
+    TRUE("true", 2000),
+    FALSE("false", 2000),
+    NAMESPACE("namespace"),
+    FUNCTION_DEF("function", true),
+    CODE_BLOCK_START("{", true),
+    CODE_BLOCK_END("}", true),
+    RETURN("return"),
+    WHILE("while"),
+    FIELD("field"),
+    COMMENT_START("//"),
+    NULL("null");
 
     private String keyword;
     private int precedence;

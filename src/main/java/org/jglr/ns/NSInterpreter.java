@@ -112,8 +112,7 @@ public class NSInterpreter implements NSOps, NSTypes {
                 NSObject var = valuesStack.pop();
                 NSObject field = var.field(((NSFieldInsn) insn).name());
                 if (field == null) {
-                    throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).name() + " in type " + var.type().getID(), lineNumber,
-                            index, insn);
+                    throwRuntimeException("Unknown field: " + ((NSFieldInsn) insn).name() + " in type " + var.type().getID(), lineNumber, index, insn);
                 } else
                     valuesStack.push(field);
             } else if (insn.getOpcode() == FUNCTION_CALL) {

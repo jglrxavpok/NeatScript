@@ -26,9 +26,9 @@ public class NSNativeClass extends NSClass {
         throw new UnsupportedOperationException("A native class doesn't have a source file");
     }
 
-    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, String... types) {
+    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, NSType returnType, String... types) {
         String[] names = generateNames(types);
-        return javaMethod(name, method, names, types);
+        return javaMethod(name, method, returnType, names, types);
     }
 
     private String[] generateNames(String[] types) {
@@ -47,21 +47,21 @@ public class NSNativeClass extends NSClass {
         return names;
     }
 
-    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, String[] names, String... types) {
+    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, NSType returnType, String[] names, String... types) {
         NSType[] typesArray = new NSType[types.length];
         for (int i = 0; i < types.length; i++) {
             typesArray[i] = NSTypes.fromIDOrDummy(name);
         }
-        return javaMethod(name, method, names, typesArray);
+        return javaMethod(name, method, returnType, names, typesArray);
     }
 
-    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, NSType... types) {
+    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, NSType returnType, NSType... types) {
         String[] names = generateNames(types);
-        return javaMethod(name, method, names, types);
+        return javaMethod(name, method, returnType, names, types);
     }
 
-    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, String[] names, NSType... types) {
-        methods().add(new NSJavaMethod(name, method, names, types));
+    public NSNativeClass javaMethod(String name, Consumer<Stack<NSObject>> method, NSType returnType, String[] names, NSType... types) {
+        methods().add(new NSJavaMethod(name, method, returnType, names, types));
         return this;
     }
 

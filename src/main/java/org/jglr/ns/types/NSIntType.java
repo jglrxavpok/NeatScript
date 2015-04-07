@@ -1,50 +1,61 @@
 package org.jglr.ns.types;
 
 import org.jglr.ns.*;
+import org.jglr.ns.nativeclasses.NSIntClass;
+import org.jglr.ns.nativeclasses.NSStringClass;
 
-public class NSIntType extends NSType {
+public class NSIntType extends NSClassType {
 
     public NSIntType() {
-        super("Int", NSTypes.OBJECT_TYPE);
+        super("Int");
+    }
+
+    @Override
+    public void initType() {
+        typeClass(new NSIntClass());
+        super.initType();
     }
 
     public NSObject operation(NSObject a, NSObject b, NSOperator operator) {
         switch (operator) {
-        case PLUS:
-            return new NSObject(this, (int) ((int) a.value() + (float) b.castedValue(NSTypes.FLOAT_TYPE)));
+            case PLUS:
+                return new NSObject(this, (int) ((int) a.value() + (int) b.castedValue(NSTypes.INT_TYPE)));
 
-        case MINUS:
-            return new NSObject(this, (int) ((int) a.value() - (float) b.castedValue(NSTypes.FLOAT_TYPE)));
+            case MINUS:
+                return new NSObject(this, (int) ((int) a.value() - (int) b.castedValue(NSTypes.INT_TYPE)));
 
-        case TIMES:
-            return new NSObject(this, (int) ((int) a.value() * (float) b.castedValue(NSTypes.FLOAT_TYPE)));
+            case TIMES:
+                return new NSObject(this, (int) ((int) a.value() * (int) b.castedValue(NSTypes.INT_TYPE)));
 
-        case DIVIDE:
-            return new NSObject(this, (int) ((int) a.value() / (float) b.castedValue(NSTypes.FLOAT_TYPE)));
+            case DIVIDE:
+                return new NSObject(this, (int) ((int) a.value() / (int) b.castedValue(NSTypes.INT_TYPE)));
 
-        case GREATER_THAN:
-            return (int) a.value() > (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
+            case GREATER_THAN:
+                return (int) a.value() > (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
-        case LESS_THAN:
-            return (int) a.value() < (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
+            case LESS_THAN:
+                return (int) a.value() < (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
-        case GEQUAL:
-            return (int) a.value() >= (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
+            case GEQUAL:
+                return (int) a.value() >= (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
-        case LEQUAL:
-            return (int) a.value() <= (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
+            case LEQUAL:
+                return (int) a.value() <= (float) b.castedValue(NSTypes.FLOAT_TYPE) ? NSTypes.BOOL_TYPE.TRUE : NSTypes.BOOL_TYPE.FALSE;
 
-        case LEFT_SHIFT:
-            return new NSObject(this, (int) ((int) a.value() << (int) b.castedValue(this)));
+            case LEFT_SHIFT:
+                return new NSObject(this, ((int) a.value() << (int) b.castedValue(this)));
 
-        case RIGHT_SHIFT:
-            return new NSObject(this, (int) ((int) a.value() >> (int) b.castedValue(this)));
+            case RIGHT_SHIFT:
+                return new NSObject(this, ((int) a.value() >> (int) b.castedValue(this)));
 
-        case UNSIGNED_RIGHT_SHIFT:
-            return new NSObject(this, (int) ((int) a.value() >>> (int) b.castedValue(this)));
+            case UNSIGNED_RIGHT_SHIFT:
+                return new NSObject(this, ((int) a.value() >>> (int) b.castedValue(this)));
 
-        default:
-            break;
+            case MODULO:
+                return new NSObject(this, ((int) a.value() % (int) b.castedValue(this)));
+
+            default:
+                break;
         }
         return super.operation(a, b, operator);
     }
@@ -52,13 +63,6 @@ public class NSIntType extends NSType {
     @Override
     public NSObject emptyObject() {
         return new NSObject(this, 0);
-    }
-
-    @Override
-    public NSType init(NSObject object) {
-        if (object.value() == null)
-            throw new IllegalArgumentException("Object has for value null but is int");
-        return super.init(object);
     }
 
     @Override
@@ -79,9 +83,4 @@ public class NSIntType extends NSType {
         return super.cast(value, type);
     }
 
-    @Override
-    public void initType() {
-        // TODO Implement
-
-    }
 }

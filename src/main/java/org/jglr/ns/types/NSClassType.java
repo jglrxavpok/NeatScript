@@ -46,6 +46,7 @@ public class NSClassType extends NSType {
     @Override
     public void initType() {
         supertype(NSTypes.fromID(clazz.superclass()));
+        clazz.methods().forEach(method -> newFunction(method.name(), method));
     }
 
 }

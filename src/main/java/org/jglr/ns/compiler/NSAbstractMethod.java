@@ -10,8 +10,10 @@ public abstract class NSAbstractMethod {
     private List<NSType> types;
     private List<String> paramNames;
     private String owner;
+    private NSType returnType;
 
     public NSAbstractMethod() {
+        returnType(NSTypes.OBJECT_TYPE);
         types = new ArrayList<>();
         paramNames = new ArrayList<>();
     }
@@ -50,6 +52,15 @@ public abstract class NSAbstractMethod {
 
     public NSAbstractMethod owner(String owner) {
         this.owner = owner;
+        return this;
+    }
+
+    public NSType returnType() {
+        return returnType;
+    }
+
+    public NSAbstractMethod returnType(NSType returnType) {
+        this.returnType = returnType;
         return this;
     }
 

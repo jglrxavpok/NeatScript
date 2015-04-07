@@ -17,6 +17,7 @@ _Equivalent to creating a variable with a value equal to 'null'_
 Branching
 ==================
 * If
+
 ``if {condition} then
     {statements}
 end``
@@ -24,6 +25,7 @@ end``
 Execute ``{statements}`` only if ``{condition}`` is equal to ``true``
 
 * Else
+
 ``if {condition} then
     {statements}
 else then
@@ -36,6 +38,7 @@ Can only be used with an ``if``
 Loops
 ==================
 * While loop:
+
 ``while {condition} then
     {statements}
 end``
@@ -44,6 +47,7 @@ While ``{condition}`` is ``true``, ``{statements}`` is executed.
 ``{condition}`` is evaluated each time we iterate over the loop.
 
 * Until loop (NYI):
+
 ``until {condition} then
     {statements}
 end``

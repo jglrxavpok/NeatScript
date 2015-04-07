@@ -10,7 +10,7 @@ public class NSJavaMethod extends NSNativeFunc {
 
     private Consumer<Stack<NSObject>> method;
 
-    public NSJavaMethod(String name, Consumer<Stack<NSObject>> method, String[] paramNames, NSType[] types) {
+    public NSJavaMethod(String name, Consumer<Stack<NSObject>> method, NSType returnType, String[] paramNames, NSType[] types) {
         super(name);
         for (NSType t : types) {
             types().add(t);
@@ -18,6 +18,7 @@ public class NSJavaMethod extends NSNativeFunc {
         for (String n : paramNames) {
             paramNames().add(n);
         }
+        returnType(returnType);
         this.method = method;
     }
 

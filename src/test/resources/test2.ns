@@ -1,6 +1,11 @@
-Bool a = true;
-if a then
-	"Hello!";
-else
-	"Hello!2";
+Int index = 0;
+String textToDisplay;
+while index < 10 then
+	if (index % 2) == 0 then
+		print(index.toString() + " Hello!" + "dzqdzqd");
+	else
+		textToDisplay = "!Hello!2"-"2";
+		print(index.toString() + textToDisplay);
+	end
+	index++;
 end
