@@ -2,7 +2,7 @@ Int index = 0;
 String textToDisplay;
 until index == 10 then
 	if index % 2 == 0 then
-		print(index.toString() + " Hello!" + "dzqdzqd");
+		print(index.toString() + " Hello! dzqdzqd");
 	elif index == 9 then
 		"It's 9!!";
 	elif index > 6 then

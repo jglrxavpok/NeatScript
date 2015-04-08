@@ -39,6 +39,7 @@ Far future
 ==================
 
 1. Pointers-like objects, "References"
+------------------
 
 Allow to modify a variable directly.
 
@@ -47,4 +48,13 @@ Possible syntax, heavily inspired from C:
 {Type} {variableName};
 // Whatever
 {Type}* {pointerName} = &{variableName};
+```
+
+2. Inline string formatting
+------------------
+Allow for such things as:
+```
+String other = "Test";
+String text = "o's value is #{o}"
+print(text); // Should output "o's value is Test"
 ```

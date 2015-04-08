@@ -17,11 +17,12 @@ Variable naming
 NeatScript imposes some restrictions to variable naming:
 * Variable names cannot contain a space in them.
 * Variable names cannot contain an operator in them, go to section [Operators](#operators) to see the operators' list
+* Variable names cannot contain only digits, those are called numbers.
 
-There are also guidelines but you are not obliged to follow them _but please be consistent_:
-* Variable names usually starts with lowercase character.
+There are also guidelines, you are not obliged to follow them _but please be consistent_:
+* Variable names usually starts with a lowercase character.
 * Variable names should follow camelCase case.
-* Initialisms of any length may be camelCase but they are recommended to be kept with capitals (e.g., ``initIPAddressViaXML``)
+* Initialisms of any length may be camelCase but they are recommended to be kept in capitals letters (e.g., ``initIPAddressViaXML``)
 
 Branching
 ==================
@@ -55,7 +56,7 @@ elif {other condition} then
 end
 ```
 
-Execute ``{other statements}`` only if ``{condition}`` is equal to ``false`` AND that ``{condition}`` is equal to true.
+Execute ``{other statements}`` only if ``{condition}`` is equal to ``false`` AND that ``{other condition}`` is equal to true.
 
 Can only be used with an ``if``!
 
@@ -101,6 +102,7 @@ Operators
 
 ``a != b`` Checks that 'a' is not equal to 'b'
 
+``o.{field or function call}`` Calls a function on object 'o' or get a field of object 'o'
 
 Loops
 ==================
