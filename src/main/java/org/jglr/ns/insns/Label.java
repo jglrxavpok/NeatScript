@@ -18,4 +18,8 @@ public class Label {
         }
         return false;
     }
+
+    public String toString() {
+        return id();
+    }
 }

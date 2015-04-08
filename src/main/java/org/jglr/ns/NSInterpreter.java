@@ -80,6 +80,8 @@ public class NSInterpreter implements NSOps, NSTypes {
             } else if (insn.getOpcode() == NEW_VAR) {
                 NewVarInsn varInsn = (NewVarInsn) insn;
                 NSVariable variable = new NSVariable(varInsn.type(), varInsn.name(), varInsn.varIndex());
+                variable.startLabel(varInsn.startLabel());
+                variable.endLabel(varInsn.endLabel());
                 if (!variables.containsKey(variable.varIndex())) {
                     variables.put(variable.varIndex(), variable);
                 } else {
@@ -144,6 +146,10 @@ public class NSInterpreter implements NSOps, NSTypes {
                 String fieldName = fieldInsn.name();
                 NSField field = owner.field(fieldName);
                 field.value(valuesStack.pop());
+            } else if (insn.getOpcode() == LABEL) {
+                LabelInsn labelInsn = (LabelInsn)insn;
+                final Label currentLabel = labelInsn.label();
+                variables.entrySet().removeIf(entry -> currentLabel.equals(entry.getValue().endLabel()));
             }
         }
         return null;

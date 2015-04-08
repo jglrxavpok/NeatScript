@@ -31,6 +31,8 @@ public class NSCompiler implements NSOps {
     private Stack<CompilerState> compilerStates;
     private Stack<LoopStartingPoint> loopStartStack;
     private boolean inComment = false;
+    private Map<String, NSVariable> localMap;
+    private Stack<Map<String, NSVariable>> locals;
 
     public NSCompiler() {
         NSOps.initAllNames();
@@ -44,6 +46,8 @@ public class NSCompiler implements NSOps {
         compilerStates = new Stack<>();
         loopStartStack = new Stack<>();
         constantStack = new Stack<>();
+        localMap = new HashMap<>();
+        locals = new Stack<>();
         rootMethod = currentMethodDef = (NSFuncDef) new NSFuncDef().name(NSFuncDef.ROOT_ID);
         varId = 1; // We start at 1 because 0 represents 'self'
     }
@@ -93,6 +97,7 @@ public class NSCompiler implements NSOps {
                     tokenList.add(token);
             }
         }
+        setupLocalEndLbl(localMap, true);
         if (!tokenList.isEmpty()) {
             throwCompilerError("Instruction stack isn't empty. Problem while reading the source code.", null);
         }
@@ -500,7 +505,10 @@ public class NSCompiler implements NSOps {
                             currentMethodDef.paramNames().add(token.content);
                         } else {
                             varIndex = nextVarIndex();
-                            insnList.add(new NewVarInsn(pendingType, token.content, varIndex));
+                            NSVariable variable = new NSVariable(pendingType, token.content, varIndex, pendingType.emptyObject());
+                            variable.startLabel(new Label(getPreviousLabelID()));
+                            insnList.add(new NewVarInsn(variable));
+                            localMap.put(token.content, variable);
                             varName2Type.put(token.content, pendingType);
                             varName2Id.put(token.content, varIndex);
                             System.out.println(token.content);
@@ -757,6 +765,7 @@ public class NSCompiler implements NSOps {
                         break;
 
                     case CODE_BLOCK_END:
+                        setupLocalEndLbl(localMap);
                         popState();
                         break;
 
@@ -862,22 +871,49 @@ public class NSCompiler implements NSOps {
         return varId++;
     }
 
-    private static final String SUB_LABEL_SEPARATOR = "-";
+    private static final String SUB_LABEL_SEPARATOR = ".";
 
     private void popLabelID() throws NSCompilerException {
+        setupLocalEndLbl(localMap);
         labelBase = labelBase.substring(0, labelBase.lastIndexOf(SUB_LABEL_SEPARATOR));
         int min = labelBase.lastIndexOf(SUB_LABEL_SEPARATOR) + 1;
-        if (min < 0)
+        if (min < 0) {
             throwCompilerException("Unmatched bracket");
-        if(min == 0)
+        }
+        if(min == 0) {
             min = 1;
+        }
         labelID = Integer.parseInt(labelBase.substring(min));
         labelBase = labelBase.substring(0, labelBase.length() - ("" + labelID).length());
+
+
+        localMap = locals.pop();
+    }
+
+    private void setupLocalEndLbl(Map<String, NSVariable> map) {
+        setupLocalEndLbl(map, false);
+    }
+
+    private void setupLocalEndLbl(Map<String, NSVariable> map, boolean includeLast) {
+        map.entrySet().forEach(entry ->
+        {
+            String id;
+            if(includeLast) {
+                id = getCurrentLabelID();
+            } else {
+                id = getPreviousLabelID();
+            }
+            Label currentLabel = new Label(id);
+            entry.getValue().endLabel(currentLabel);
+        });
     }
 
     private void pushLabelID() {
         labelBase += labelID + SUB_LABEL_SEPARATOR;
         labelID = 0;
+
+        locals.push(localMap);
+        localMap = new HashMap<>();
     }
 
     private String getPreviousLabelID() {
