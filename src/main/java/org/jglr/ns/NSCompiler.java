@@ -665,7 +665,7 @@ public class NSCompiler implements NSOps {
 
                     case ELSE:
                         popLabelID();
-                        loopStartStack.pop();
+                        checkMatchingLoopStart(loopStartStack.pop(), "else");
                         insnList.add(new LabelInsn(new Label(nextLabelID())));
                         insnList.add(new StackInsn(STACK_PEEK));
                         insnList.add(new LabelInsn(IF_GOTO, new Label(getCurrentLabelID())));
@@ -675,7 +675,7 @@ public class NSCompiler implements NSOps {
 
                     case ELIF:
                         // popLabelID();
-                        loopStartStack.pop();
+                        checkMatchingLoopStart(loopStartStack.pop(), "elif");
                         // insnList.add(new LabelInsn(new Label(nextLabelID())));
                         insnList.add(new StackInsn(STACK_PEEK));
                         insnList.add(new LabelInsn(IF_GOTO, new Label(getCurrentLabelID())));
@@ -793,6 +793,11 @@ public class NSCompiler implements NSOps {
         default:
             break;
         }
+    }
+
+    private void checkMatchingLoopStart(LoopStartingPoint startingPoint, String branching) throws NSCompilerException {
+        if(startingPoint.type() != NSKeywords.IF && startingPoint.type() != NSKeywords.ELIF)
+            throwCompilerException(branching+" branching can only be used after an 'if' or an 'elif' condition");
     }
 
     private void loadBoolInsn(List<NSInsn> insnList, boolean value, Stack<NSType> typeStack) {

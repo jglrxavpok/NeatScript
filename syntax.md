@@ -18,45 +18,53 @@ Branching
 ==================
 * If
 
-``if {condition} then
+```if {condition} then
     {statements}
-end``
+end```
 
 Execute ``{statements}`` only if ``{condition}`` is equal to ``true``
 
 * Else
 
-``if {condition} then
+```if {condition} then
     {statements}
 else then
     {other statements}
-end``
+end```
 
-Execute ``{other statements}`` only if ``{condition}`` is equal to ``false``.
+* Elif, contraction of 'Else if'
+
+```if {condition} then
+    {statements}
+elif {other condition} then
+    {other statements}
+end```
+
+Execute ``{other statements}`` only if ``{condition}`` is equal to ``false`` AND that ``{condition}`` is equal to true.
 Can only be used with an ``if``
 
 Loops
 ==================
 * While loop:
 
-``while {condition} then
+```while {condition} then
     {statements}
-end``
+end```
 
 While ``{condition}`` is ``true``, ``{statements}`` is executed.
 ``{condition}`` is evaluated each time we iterate over the loop.
 
 * Until loop:
 
-``until {condition} then
+```until {condition} then
     {statements}
-end``
+end```
 
 While ``{condition}`` is ``false``, ``{statements}`` is executed.
 ``{condition}`` is evaluated each time we iterate over the loop.
 
 * For loop (NYI):
 
-``for {Type} {name} = {value}; {condition}; {step} then
+```for {Type} {name} = {value}; {condition}; {step} then
     {statements}
-end``
+end```
