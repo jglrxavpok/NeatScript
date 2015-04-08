@@ -2,15 +2,11 @@ package org.jglr.ns;
 
 import java.io.*;
 import java.util.*;
-import java.util.Map.Entry;
 
 import org.jglr.ns.compiler.*;
 import org.jglr.ns.compiler.VariablePointer.VariablePointerMode;
-import org.jglr.ns.funcs.NSNativeFunc;
 import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
-
-import javax.swing.text.html.Option;
 
 public class NSCompiler implements NSOps {
 
@@ -62,31 +58,39 @@ public class NSCompiler implements NSOps {
         this.source = source.content();
         this.index = 0;
         this.line = 0;
-        NSCodeToken nSCodeToken;
+        NSCodeToken token;
         ArrayList<NSCodeToken> tokenList = new ArrayList<NSCodeToken>();
         List<NSInsn> finalInstructions = null;
         int lineNumber = 1;
-        while ((nSCodeToken = nextToken()) != null) {
+        while ((token = nextToken()) != null) {
             finalInstructions = currentMethodDef.instructions();
             if (finalInstructions.isEmpty())
                 finalInstructions.add(new LineNumberInsn(1));
 
-            if (nSCodeToken.type == NSTokenType.NEW_LINE) {
+            if (token.type == NSTokenType.NEW_LINE) {
                 finalInstructions.add(new LineNumberInsn(++lineNumber));
-            } else if (nSCodeToken.type == NSTokenType.KEYWORD && nSCodeToken.content.equals(NSKeywords.COMMENT_START.raw())) {
+            } else if (token.type == NSTokenType.KEYWORD && token.content.equals(NSKeywords.COMMENT_START.raw())) {
                 inComment = true;
-                System.out.println(">>>> COMMENT");
             } else if (!inComment) {
-                if (nSCodeToken.createsNewLabel()) {
-                    if (nSCodeToken.type != NSTokenType.INSTRUCTION_END)
-                        tokenList.add(nSCodeToken);
+                if(token.type == NSTokenType.KEYWORD && ((KeywordToken)token).keyword() == NSKeywords.ELIF) {
+                    makeInstructions(tokenList, finalInstructions);
+                    typeStack.clear();
+                    if (!tokenList.isEmpty()) {
+                        throwCompilerException("Missing semicolon.");
+                    }
+
+                    popLabelID();
+                    tokenList.add(token);
+                } else if (token.createsNewLabel()) {
+                    if (token.type != NSTokenType.INSTRUCTION_END)
+                        tokenList.add(token);
                     makeInstructions(tokenList, finalInstructions);
                     typeStack.clear();
                     if (!tokenList.isEmpty()) {
                         throwCompilerException("Missing semicolon.");
                     }
                 } else
-                    tokenList.add(nSCodeToken);
+                    tokenList.add(token);
             }
         }
         if (!tokenList.isEmpty()) {
@@ -108,7 +112,7 @@ public class NSCompiler implements NSOps {
                             try {
                                 calledMethod = clazz.method(callInsn.functionName(), callInsn.types());
                             } catch (Exception e) {
-                                ; // We ignore this exception as there's one only if the method doesn't exist
+                                // We ignore this exception as there's one only if the method doesn't exist
                             }
 
                             if (calledMethod != null) {
@@ -301,8 +305,9 @@ public class NSCompiler implements NSOps {
     }
 
     private boolean isKeyword(StringBuffer buffer) {
+        String raw = buffer.toString();
         for (NSKeywords keyword : NSKeywords.values()) {
-            if (keyword.raw().equals(buffer.toString())) {
+            if(keyword.raw().equals(raw)) {
                 return true;
             }
         }
@@ -450,7 +455,7 @@ public class NSCompiler implements NSOps {
                     throwCompilerException("Unexpected symbol: " + token.content);
                 }
             } else {
-                handleToken(token, 0, new ArrayList<NSCodeToken>(), insnList);
+                handleToken(token, 0, new ArrayList<>(), insnList);
             }
         } else {
             List<NSCodeToken> rpnList = toRPN(tokenList);
@@ -479,6 +484,7 @@ public class NSCompiler implements NSOps {
                     }
                     return;
                 }
+                boolean justCreated = false;
                 if (isNumber(token.content)) {
                     try {
                         int value = Integer.parseInt(token.content);
@@ -499,6 +505,7 @@ public class NSCompiler implements NSOps {
                             varName2Id.put(token.content, varIndex);
                             System.out.println(token.content);
                         }
+                        justCreated = true;
                         pendingType = null;
                     } else {
                         if (varName2Id.containsKey(token.content)) {
@@ -508,15 +515,19 @@ public class NSCompiler implements NSOps {
                     if (!inFunctionDef) {
                         if (clazz.field(token.content) != null) {
                             NSType type = varName2Type.get(token.content); // FIXME: Use something else than varName2Type, this code relies on a glitch
+                            if(!justCreated) {
+                                insnList.add(new NSFieldInsn(FIELD_LOAD, clazz.name(), token.content));
+                                typeStack.add(type);
+                                constantStack.push(false);
+                            }
                             varPointer.pushField(new FieldInfo(token.content, clazz.name(), type));
-                            insnList.add(new NSFieldInsn(FIELD_LOAD, clazz.name(), token.content));
-                            typeStack.add(type);
-                            constantStack.push(false);
                         } else {
                             varPointer.pushVariable(varIndex);
-                            insnList.add(new NSVarInsn(VAR_LOAD, varIndex));
-                            typeStack.push(varName2Type.get(token.content));
-                            constantStack.push(false);
+                            if(!justCreated) {
+                                insnList.add(new NSVarInsn(VAR_LOAD, varIndex));
+                                typeStack.push(varName2Type.get(token.content));
+                                constantStack.push(false);
+                            }
                         }
                     }
                 }
@@ -564,7 +575,7 @@ public class NSCompiler implements NSOps {
                         typeStack.push(NSTypes.fromIDOrDummy(id).emptyObject().field(fieldName).type());
                         constantStack.push(true);
                     }
-                } else if (operator == NSOperator.ASSIGNEMENT) {
+                } else if (operator == NSOperator.ASSIGNMENT) {
                     if (varPointer.isVar()) {
                         if (varPointer.peekVarId() == -1) {
                             throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
@@ -644,6 +655,7 @@ public class NSCompiler implements NSOps {
                 KeywordToken keyword = (KeywordToken) token;
                 switch (keyword.keyword()) {
                     case IF:
+                        typeStack.pop();
                         insnList.add(new StackInsn(STACK_PUSH));
                         insnList.add(new StackInsn(STACK_PEEK));
                         insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
@@ -661,6 +673,22 @@ public class NSCompiler implements NSOps {
                         loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.ELSE));
                         break;
 
+                    case ELIF:
+                        // popLabelID();
+                        loopStartStack.pop();
+                        // insnList.add(new LabelInsn(new Label(nextLabelID())));
+                        insnList.add(new StackInsn(STACK_PEEK));
+                        insnList.add(new LabelInsn(IF_GOTO, new Label(getCurrentLabelID())));
+
+                        typeStack.pop();
+                        insnList.add(new StackInsn(STACK_PUSH));
+                        insnList.add(new StackInsn(STACK_PEEK));
+                        insnList.add(new LabelInsn(IF_NOT_GOTO, new Label(getCurrentLabelID())));
+
+                        pushLabelID();
+                        loopStartStack.push(new LoopStartingPoint(getCurrentLabelID(), NSKeywords.ELIF));
+                        break;
+
                     case END:
                         insnList.add(new StackInsn(STACK_POP));
                         insnList.add(new NSBaseInsn(POP));
@@ -673,6 +701,8 @@ public class NSCompiler implements NSOps {
                     case UNTIL:
                     case WHILE:
                         loopStartStack.push(new LoopStartingPoint(getPreviousLabelID(), NSKeywords.WHILE));
+
+                        typeStack.pop();
                         insnList.add(new StackInsn(STACK_PUSH));
                         insnList.add(new StackInsn(STACK_PEEK));
                         if(keyword.keyword() == NSKeywords.WHILE)

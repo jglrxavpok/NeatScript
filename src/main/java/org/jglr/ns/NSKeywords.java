@@ -4,7 +4,7 @@ public enum NSKeywords
 {
     IF("if"),
     ELSE("else", true),
-    ELSEIF("elseif", true),
+    ELIF("elif"),
     DELETE("delete"),
     THEN("then", true),
     END("end", true),

@@ -18,9 +18,9 @@ public enum NSOperator
     GREATER_THAN(">", 6),
     GEQUAL(">=", 6),
     LEQUAL("<=", 6),
-    ASSIGNEMENT("=", 1),
+    ASSIGNMENT("=", 1),
     NON_EQUALITY_CHECK("!=", 7),
-    EQUALITY_CHECK("==", 7),
+    EQUALITY_CHECK("==", 3),
     UNSIGNED_RIGHT_SHIFT(">>>", 5),
     MEMBER_ACCESS(".", 7),
     INCREMENT("++", 2),
@@ -50,12 +50,7 @@ public enum NSOperator
             list = new ArrayList<>();
             for (NSOperator operator : values())
                 list.add(operator);
-            Collections.sort(list, new Comparator<NSOperator>() {
-                @Override
-                public int compare(NSOperator o1, NSOperator o2) {
-                    return Integer.compare(o1.name().length(), o2.name().length());
-                }
-            });
+            Collections.sort(list, (a, b) -> Integer.compare(a.name().length(), b.name().length()));
         }
         return list;
     }
