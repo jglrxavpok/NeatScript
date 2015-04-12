@@ -1,0 +1,6 @@
+package org.jglr.ns.compiler.refactor;
+
+public enum NSTokenType
+{
+    STRING, KEYWORD, INSTRUCTION_END, NEW_LINE, OPERATOR, FUNCTION_CALL, OPEN_PARENTHESIS, CLOSE_PARENTHESIS, WORD;
+}

@@ -5,11 +5,12 @@ import java.util.*;
 import org.jglr.ns.*;
 
 public interface NSTypes {
-    public static NSType STRING_TYPE = new NSStringType();
-    public static NSBoolType BOOL_TYPE = new NSBoolType();
-    public static NSFloatType FLOAT_TYPE = new NSFloatType();
-    public static NSIntType INT_TYPE = new NSIntType();
-    public static NSType OBJECT_TYPE = new NSObjectType();
+    NSType STRING_TYPE = new NSStringType();
+    NSBoolType BOOL_TYPE = new NSBoolType();
+    NSFloatType FLOAT_TYPE = new NSFloatType();
+    NSIntType INT_TYPE = new NSIntType();
+    NSType OBJECT_TYPE = new NSObjectType();
+    NSType RANGE_TYPE = new NSRangeType();
 
     public static NSType getPriorityType(NSObject value, NSType a, NSType b) {
         // TODO: True Priority System

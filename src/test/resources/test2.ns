@@ -1,3 +1,5 @@
+import "neatcript.utils.range";
+
 Int index = 0;
 String textToDisplay;
 until index == 10 then
@@ -16,7 +18,5 @@ end
 
 index = 0;
 until index == 5 then
-    String text = "Some text";
-    print(text);
     index++;
 end

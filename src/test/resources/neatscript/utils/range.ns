@@ -1,0 +1,21 @@
+#ifndef RANGE
+#def RANGE
+
+field Float lower;
+field Float upper;
+
+function $(Float lowerBound, Float upperBound) {
+	lower = lowerBound;
+	upper = upperBound;
+	print("Lower bound is " + lower);
+	print("Upper bound is " + upper);
+}
+
+function contains(Float value) {
+	if 2 >= 10 then
+		return 10 <= 2;
+	end
+	return false;
+}
+
+#endif

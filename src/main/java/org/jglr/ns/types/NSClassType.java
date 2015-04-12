@@ -10,6 +10,12 @@ public class NSClassType extends NSType {
         super(name, NSTypes.OBJECT_TYPE);
     }
 
+    public NSClassType(NSClass clazz) {
+        super(clazz.name(), NSTypes.OBJECT_TYPE);
+        this.clazz = clazz;
+        initType();
+    }
+
     @Override
     public NSObject emptyObject() {
         return new NSObject(this, null);

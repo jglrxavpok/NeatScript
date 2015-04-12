@@ -5,11 +5,16 @@ import java.util.*;
 
 import org.jglr.ns.compiler.*;
 import org.jglr.ns.compiler.VariablePointer.VariablePointerMode;
+import org.jglr.ns.compiler.refactor.KeywordToken;
+import org.jglr.ns.compiler.refactor.NSCodeToken;
+import org.jglr.ns.compiler.refactor.NSTokenType;
+import org.jglr.ns.compiler.refactor.OperatorToken;
 import org.jglr.ns.insns.*;
 import org.jglr.ns.types.*;
 
 public class NSCompiler implements NSOps {
 
+    private NSPreprocessor preprocessor;
     private Stack<Boolean> constantStack;
     private int index;
     private String source;
@@ -50,6 +55,8 @@ public class NSCompiler implements NSOps {
         locals = new Stack<>();
         rootMethod = currentMethodDef = (NSFuncDef) new NSFuncDef().name(NSFuncDef.ROOT_ID);
         varId = 1; // We start at 1 because 0 represents 'self'
+
+        preprocessor = new NSPreprocessor();
     }
 
     public NSClass compile(String name, String source) throws NSCompilerException, IOException {
@@ -60,6 +67,7 @@ public class NSCompiler implements NSOps {
         this.clazz = new NSClass(source.name().substring(0, source.name().indexOf("."))).sourceFile(source.name());
         clazz.rootMethod(rootMethod.owner(clazz.name()));
         this.source = source.content();
+        this.source = preprocessor.preprocess(source);
         this.index = 0;
         this.line = 0;
         NSCodeToken token;
@@ -137,15 +145,22 @@ public class NSCompiler implements NSOps {
                     }
 
                 }
-                while(currentLabel.id().contains(SUB_LABEL_SEPARATOR)) {
-                    Label newLabel = new Label(currentLabel.id().substring(0, currentLabel.id().indexOf(SUB_LABEL_SEPARATOR)));
-                    method.instructions().add(new LabelInsn(newLabel));
-                    currentLabel = newLabel;
-                }
+                if(currentLabel != null)
+                    while(currentLabel.id().contains(SUB_LABEL_SEPARATOR)) {
+                        Label newLabel = new Label(currentLabel.id().substring(0, currentLabel.id().indexOf(SUB_LABEL_SEPARATOR)));
+                        method.instructions().add(new LabelInsn(newLabel));
+                        currentLabel = newLabel;
+                    }
             }
         }
 
         return clazz;
+    }
+
+    private String preprocess(NSSourceFile source) throws IOException {
+        String content = source.content();
+        
+        return content;
     }
 
     private NSCodeToken nextToken() throws NSCompilerException {
@@ -502,7 +517,17 @@ public class NSCompiler implements NSOps {
                     int varIndex = -1;
                     if (pendingType != null) {
                         if (inFunctionDef) {
+
                             currentMethodDef.paramNames().add(token.content);
+                            varIndex = nextVarIndex();
+                            NSVariable variable = new NSVariable(pendingType, token.content, varIndex, pendingType.emptyObject());
+                            variable.startLabel(new Label(getPreviousLabelID()));
+                            localMap.put(token.content, variable);
+                            varName2Type.put(token.content, pendingType);
+                            varName2Id.put(token.content, varIndex);
+
+                            System.out.println("NEW PARAM: "+variable.name()+", "+variable.type().getID()+", "+variable.varIndex());
+
                         } else {
                             varIndex = nextVarIndex();
                             NSVariable variable = new NSVariable(pendingType, token.content, varIndex, pendingType.emptyObject());
@@ -518,6 +543,7 @@ public class NSCompiler implements NSOps {
                     } else {
                         if (varName2Id.containsKey(token.content)) {
                             varIndex = varName2Id.get(token.content);
+                            System.out.println("Loaded "+varIndex+" <= "+token.content);
                         }
                     }
                     if (!inFunctionDef) {
@@ -549,107 +575,125 @@ public class NSCompiler implements NSOps {
 
             case OPERATOR:
                 NSOperator operator = ((OperatorToken) token).operator();
-                if (operator == NSOperator.MEMBER_ACCESS) {
-                    NSInsn previous = insnList.get(insnList.size() - 1);
-                    if (previous.getOpcode() == FUNCTION_CALL) {
-                        FunctionCallInsn callInsn = (FunctionCallInsn) previous;
-                        NSType previousType = typeStack.pop();
-                        constantStack.pop();
-                        callInsn.functionOwner(previousType.getID());
-                        System.out.println(">>>>>>>> "+callInsn.functionOwner()+"."+callInsn.functionName());
-                        HashMap<String, NSAbstractMethod> functions = previousType.functions();
-                        NSType returnType = functions.get(callInsn.functionName()).returnType();
-                        typeStack.push(returnType);
-                        constantStack.push(false);
-                    } else if (previous.getOpcode() == VAR_LOAD) { // VAR_LOAD -1 if everything's okay
-                        String id = "Object";
-                        varPointer.popValue(); // We remove the invalid variable on top of the variable stack
+                switch(operator) {
+                    case MEMBER_ACCESS:
+                        NSInsn previous = insnList.get(insnList.size() - 1);
+                        if (previous.getOpcode() == FUNCTION_CALL) {
+                            FunctionCallInsn callInsn = (FunctionCallInsn) previous;
+                            NSType previousType = typeStack.pop();
+                            constantStack.pop();
+                            callInsn.functionOwner(previousType.getID());
+                            System.out.println(">>>>>>>> "+callInsn.functionOwner()+"."+callInsn.functionName());
+                            HashMap<String, NSAbstractMethod> functions = previousType.functions();
+                            NSType returnType = functions.get(callInsn.functionName()).returnType();
+                            typeStack.push(returnType);
+                            constantStack.push(false);
+                        } else if (previous.getOpcode() == VAR_LOAD) { // VAR_LOAD -1 if everything's okay
+                            String id = "Object";
+                            varPointer.popValue(); // We remove the invalid variable on top of the variable stack
+                            if (varPointer.isVar()) {
+                                if (varPointer.peekVarId() == -1) {
+                                    throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                                }
+                                id = varName2Type.get(nameOf(varPointer.peekVarId())).getID();
+                            } else {
+                                if (varPointer.peekField() == null) {
+                                    throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                                }
+                                id = varPointer.peekField().type().getID();
+                            }
+                            String fieldName = tokenList.get(tokenIndex - 1).content;
+                            insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, fieldName));
+                            System.err.println("{{{ content = " + fieldName + " ; id = " + id);
+                            constantStack.pop();
+                            typeStack.pop();
+                            typeStack.push(NSTypes.fromIDOrDummy(id).emptyObject().field(fieldName).type());
+                            constantStack.push(true);
+                        }
+                        break;
+
+                    case ASSIGNMENT:
                         if (varPointer.isVar()) {
                             if (varPointer.peekVarId() == -1) {
-                                throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                                throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
+                            } else {
+                                insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
+                                typeStack.pop();
+                                constantStack.pop();
                             }
-                            id = varName2Type.get(nameOf(varPointer.peekVarId())).getID();
-                        } else {
+                            varPointer.popValue();
+                        } else if (varPointer.isField()) {
                             if (varPointer.peekField() == null) {
-                                throwCompilerException("Tried to access a field of a non-existing field/variable.");
+                                throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
+                            } else {
+                                FieldInfo infos = varPointer.peekField();
+                                insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
+                                typeStack.pop();
+                                constantStack.pop();
                             }
-                            id = varPointer.peekField().type().getID();
+                            varPointer.popValue();
+                        } else
+                            throwCompilerException("Tried to assign a value to an object that is not a variable.");
+                        break;
+
+                    case INCREMENT:
+                    case DECREMENT:
+                        if (varPointer.isVar()) {
+                            if (varPointer.peekVarId() == -1) {
+                                throwCompilerException("Invalid argument for operator ++/--");
+                            } else {
+                                insnList.add(new NSLoadIntInsn(1));
+                                insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
+                                insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
+                                insnList.add(new NSVarInsn(VAR_LOAD, varPointer.peekVarId()));
+                            }
+                            varPointer.popValue();
+                        } else if (varPointer.isField()) {
+                            if (varPointer.peekField() == null) {
+                                throwCompilerException("Invalid argument for operator ++/--");
+                            } else {
+                                insnList.add(new NSLoadIntInsn(1));
+                                insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
+                                FieldInfo infos = varPointer.peekField();
+                                insnList.add(new NSFieldInsn(FIELD_LOAD, infos.owner(), infos.name()));
+                                insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
+                            }
+                            varPointer.popValue();
                         }
-                        String fieldName = tokenList.get(tokenIndex - 1).content;
-                        insnList.set(insnList.size() - 1, new NSFieldInsn(GET_FIELD, id, fieldName));
-                        System.err.println("{{{ content = " + fieldName + " ; id = " + id);
-                        constantStack.pop();
+                        break;
+
+                    case RANGE:
                         typeStack.pop();
-                        typeStack.push(NSTypes.fromIDOrDummy(id).emptyObject().field(fieldName).type());
-                        constantStack.push(true);
+                        typeStack.pop();
+                        loadClassInstanceInsn(insnList, "Range", NSTypes.FLOAT_TYPE, NSTypes.FLOAT_TYPE);
+                        typeStack.push(NSTypes.RANGE_TYPE);
+                        break;
+
+                    default:
+                        System.out.println(">>>>>>>>>> "+operator.name());
+                        if(!constantStack.pop())
+                            varPointer.popValue();
+                        NSType lastType = typeStack.pop();
+                        if(!constantStack.pop())
+                            varPointer.popValue();
+                        NSType type = typeStack.pop(); // We get the type right before the last type loaded
+                        try {
+                            NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
+                            typeStack.push(result.type());
+                            constantStack.push(true);
+                            insnList.add(new OperatorInsn(operator));
+                        } catch(ArithmeticException ar) {
+                            typeStack.push(type);
+                            constantStack.push(true);
+                            insnList.add(new OperatorInsn(operator));
+                          // Everything's fine, the world's not burning down.
+                        } catch(Exception e) {
+                            e.printStackTrace();
+                            throwCompilerError("Error while handling operation ("+type.getID()+" "+operator+" "+lastType.getID()+")", e);
+                        }
+                        break;
                     }
-                } else if (operator == NSOperator.ASSIGNMENT) {
-                    if (varPointer.isVar()) {
-                        if (varPointer.peekVarId() == -1) {
-                            throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
-                        } else {
-                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
-                            typeStack.pop();
-                            constantStack.pop();
-                        }
-                        varPointer.popValue();
-                    } else if (varPointer.isField()) {
-                        if (varPointer.peekField() == null) {
-                            throwCompilerException("Tried to assign a value to an object that is not a field or a variable.");
-                        } else {
-                            FieldInfo infos = varPointer.peekField();
-                            insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
-                            typeStack.pop();
-                            constantStack.pop();
-                        }
-                        varPointer.popValue();
-                    } else
-                        throwCompilerException("Tried to assign a value to an object that is not a variable.");
-                } else if (operator == NSOperator.INCREMENT || operator == NSOperator.DECREMENT) {
-                    if (varPointer.isVar()) {
-                        if (varPointer.peekVarId() == -1) {
-                            throwCompilerException("Invalid argument for operator ++/--");
-                        } else {
-                            insnList.add(new NSLoadIntInsn(1));
-                            insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
-                            insnList.add(new NSVarInsn(VAR_STORE, varPointer.peekVarId()));
-                            insnList.add(new NSVarInsn(VAR_LOAD, varPointer.peekVarId()));
-                        }
-                        varPointer.popValue();
-                    } else if (varPointer.isField()) {
-                        if (varPointer.peekField() == null) {
-                            throwCompilerException("Invalid argument for operator ++/--");
-                        } else {
-                            insnList.add(new NSLoadIntInsn(1));
-                            insnList.add(new OperatorInsn(operator == NSOperator.INCREMENT ? NSOperator.PLUS : NSOperator.MINUS));
-                            FieldInfo infos = varPointer.peekField();
-                            insnList.add(new NSFieldInsn(FIELD_LOAD, infos.owner(), infos.name()));
-                            insnList.add(new NSFieldInsn(FIELD_SAVE, infos.owner(), infos.name()));
-                        }
-                        varPointer.popValue();
-                    }
-                } else {
-                    if(!constantStack.pop())
-                        varPointer.popValue();
-                    NSType lastType = typeStack.pop();
-                    if(!constantStack.pop())
-                        varPointer.popValue();
-                    NSType type = typeStack.pop(); // We get the type right before the last type loaded
-                    try {
-                        NSObject result = type.operation(type.emptyObject(), lastType.emptyObject(), operator);
-                        typeStack.push(result.type());
-                        constantStack.push(true);
-                        insnList.add(new OperatorInsn(operator));
-                    } catch(ArithmeticException ar) {
-                        typeStack.push(type);
-                        constantStack.push(true);
-                        insnList.add(new OperatorInsn(operator));
-                      // Everything's fine, the world's not burning down.
-                    } catch(Exception e) {
-                        throwCompilerError("Error while handling operation ("+type.getID()+" "+operator+" "+lastType.getID()+")", e);
-                    }
-                }
-                break;
+                    break;
 
             case FUNCTION_CALL:
                 if (inFunctionDef) {
@@ -786,12 +830,16 @@ public class NSCompiler implements NSOps {
                         int oldId = rollbackVarIndex(); // We remove the var id created for this variable
                         String oldName = removeName(oldId);
                         varName2Type.remove(oldName);
-                        constantStack.pop();
-                        NSType type = typeStack.pop(); // We remove the type pushed onto the stack
+                        // NSType type = typeStack.pop(); // We remove the type pushed onto the stack
 
                         // Start of creating the field
+                        NSType type = getType(typeToken.content);
                         clazz.field(type, nameToken.content);
                         varPointer.pushField(new FieldInfo(nameToken.content, clazz.name(), type));
+                        break;
+
+                    case IN:
+                        // TODO
                         break;
 
                     default:
@@ -802,6 +850,10 @@ public class NSCompiler implements NSOps {
         default:
             break;
         }
+    }
+
+    private void loadClassInstanceInsn(List<NSInsn> insnList, String className, NSType... types) {
+        insnList.add(new FunctionCallInsn("$", className).types(Arrays.asList(types)));
     }
 
     private void checkMatchingLoopStart(LoopStartingPoint startingPoint, String branching) throws NSCompilerException {

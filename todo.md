@@ -8,7 +8,7 @@ Priority
 Though, ``null`` must be able to be used as an object and functions should be able to be linked to this object, example:
  ``null.toString()``
 
-3. For loops
+2. For loops
 ------------
 
 For loops must be implemented asap too. For reminder they are specified as such [(cf. syntax file)](syntax.md):

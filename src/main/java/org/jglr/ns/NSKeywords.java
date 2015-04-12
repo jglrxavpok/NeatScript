@@ -19,6 +19,7 @@ public enum NSKeywords
     UNTIL("until"),
     FIELD("field"),
     COMMENT_START("//"),
+    IN("in"),
     NULL("null");
 
     private String keyword;

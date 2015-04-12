@@ -23,6 +23,7 @@ public enum NSOperator
     EQUALITY_CHECK("==", 3),
     UNSIGNED_RIGHT_SHIFT(">>>", 5),
     MEMBER_ACCESS(".", 7),
+    RANGE("..", 10),
     INCREMENT("++", 2),
     DECREMENT("--", 2),
     NEW("new", 10);
